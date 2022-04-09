@@ -1,0 +1,80 @@
+{
+    "shortcuts": [
+        {
+            "command": "notebook:run-all-above",
+            "keys": [
+                "Shift A"
+            ],
+            "selector": ".jp-Notebook:focus",
+              "title": "Run All Above",
+              "category": "Notebook Cell Operations"
+        },
+        {
+            "command": "notebook:restart-run-all",
+            "keys": [
+                "Shift Q"
+            ],
+            "selector": ".jp-Notebook:focus",
+              "title": "Run All Cells",
+              "category": "Notebook Cell Operations"
+        },
+        {
+          "command": "notebook:run-all-below",
+          "keys": [
+            "Shift D"
+          ],
+          "selector": ".jp-Notebook:focus",
+          "title": "Run All Below",
+          "category": "Notebook Cell Operations"
+        },
+        {
+            "command": "notebook:clear-cell-output",
+            "keys": [
+                "Shift C"
+            ],
+            "selector": ".jp-Notebook:focus"
+        },
+        {
+            "command": "notebook:move-cell-up",
+            "keys": [
+                "Ctrl Shift ArrowUp"
+            ],
+            "selector": ".jp-Notebook:focus"
+        },
+        {
+            "command": "notebook:move-cell-down",
+            "keys": [
+                "Ctrl Shift ArrowDown"
+            ],
+            "selector": ".jp-Notebook:focus"
+        },
+        {
+            "command": "filebrowser:open-path",
+            "keys": [
+                "Accel O"
+            ],
+            "selector": "body"
+        },
+        {
+            "command": "docmanager:reload",
+            "keys": [
+                "Accel Enter"
+            ],
+            "selector": "body"
+        },
+        {
+            "command": "notebook:extend-marked-cells-top",
+            "keys": [
+                "Shift ArrowUp"
+            ],
+            "selector": ".jp-Notebook:focus"
+        },
+        {
+            "command": "notebook:extend-marked-cells-bottom",
+            "keys": [
+                "Shift ArrowDown"
+            ],
+            "selector": ".jp-Notebook:focus"
+        },
+    ]        
+}
