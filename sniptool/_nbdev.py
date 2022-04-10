@@ -2,13 +2,11 @@
 
 __all__ = ["index", "modules", "custom_doc_links", "git_url"]
 
-index = {"NBfiles": "00_core.ipynb",
+index = {"Base": "00_core.ipynb",
+         "NBfiles": "00_core.ipynb",
          "Snippets": "00_core.ipynb",
-         "nb_meta_parse": "00_core.ipynb",
-         "get_file_list": "00_core.ipynb",
-         "compile_query": "00_core.ipynb",
-         "Base": "00_core.ipynb",
-         "SnippetsMagics": "00_core.ipynb"}
+         "SnippetsMagics": "00_core.ipynb",
+         "MiscMagics": "00_core.ipynb"}
 
 modules = ["core.py"]
 
