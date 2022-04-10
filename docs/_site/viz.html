@@ -1,0 +1,695 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="How to manage visual assets">
+<meta name="keywords" content=" fastai">
+<title>visualization flow | sniptool</title>
+<link rel="stylesheet" href="/sniptool/assets/css/syntax.css">
+
+<link rel="stylesheet" type="text/css" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css">
+<!--<link rel="stylesheet" type="text/css" href="assets//css/bootstrap.min.css">-->
+<link rel="stylesheet" href="/sniptool/assets/css/modern-business.css">
+<!-- Latest compiled and minified CSS -->
+<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous">
+<link rel="stylesheet" href="/sniptool/assets/css/customstyles.css">
+<link rel="stylesheet" href="/sniptool/assets/css/boxshadowproperties.css">
+<!-- most color styles are extracted out to here -->
+<link rel="stylesheet" href="/sniptool/assets/css/theme-blue.css">
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/2.1.4/jquery.min.js"></script>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery-cookie/1.4.1/jquery.cookie.min.js"></script>
+<script src="/sniptool/assets/js/jquery.navgoco.min.js"></script>
+
+
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.11.1/dist/katex.min.css" integrity="sha384-zB1R0rpPzHqg7Kpt0Aljp8JPLqbXI3bhnPWROx27a9N0Ll6ZP/+DiW/UqRcLbRjq" crossorigin="anonymous">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.11.1/dist/katex.min.js" integrity="sha384-y23I5Q6l+B6vatafAwxRu/0oK/79VlbSz7Q9aiSZUvyWYIYsd+qj+o24G5ZU2zJz" crossorigin="anonymous"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.11.1/dist/contrib/auto-render.min.js" integrity="sha384-kWPLUVMOks5AQFrykwIup5lo0m3iMkkHrD0uJ4H5cjeGihAutqP0yW0J6dpFiVkI" crossorigin="anonymous"></script>
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+  renderMathInElement( document.body, {
+    delimiters: [
+      {left: "$$", right: "$$", display: true},
+      {left: "[%", right: "%]", display: true},
+      {left: "$", right: "$", display: false}
+    ]}
+  );
+});
+</script>
+
+
+<!-- Latest compiled and minified JavaScript -->
+<script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js" integrity="sha384-Tc5IQib027qvyjSMfHjOMaLkfuWVxZxUPnCJA7l2mCWNIpG9mGCD8wGNIcPD7Txa" crossorigin="anonymous"></script>
+<!-- Anchor.js -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/anchor-js/2.0.0/anchor.min.js"></script>
+<script src="/sniptool/assets/js/toc.js"></script>
+<script src="/sniptool/assets/js/customscripts.js"></script>
+
+<link rel="shortcut icon" href="/sniptool/assets/images/favicon.ico">
+
+<!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
+<!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
+<!--[if lt IE 9]>
+<script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+<script src="https://oss.maxcdn.com/libs/respond.js/1.4.2/respond.min.js"></script>
+<![endif]-->
+
+<link rel="alternate" type="application/rss+xml" title="" href="/sniptool/feed.xml">
+
+<!-- Twitter cards -->
+
+
+
+<meta name="twitter:description" content="How to manage visual assets">
+
+
+
+<meta name="twitter:card"  content="summary">
+
+
+<!-- end of Twitter cards -->
+
+
+
+
+
+    <script>
+        $(document).ready(function() {
+            // Initialize navgoco with default options
+            $("#mysidebar").navgoco({
+                caretHtml: '',
+                accordion: true,
+                openClass: 'active', // open
+                save: false, // leave false or nav highlighting doesn't work right
+                cookie: {
+                    name: 'navgoco',
+                    expires: false,
+                    path: '/'
+                },
+                slide: {
+                    duration: 400,
+                    easing: 'swing'
+                }
+            });
+
+            $("#collapseAll").click(function(e) {
+                e.preventDefault();
+                $("#mysidebar").navgoco('toggle', false);
+            });
+
+            $("#expandAll").click(function(e) {
+                e.preventDefault();
+                $("#mysidebar").navgoco('toggle', true);
+            });
+
+            // activate menu items where href is matching to current page
+            $("#mysidebar a[href='" + location.pathname.match(/(\/[^\/]*)$/)[1] + "']")
+                .parents('li').addClass('active')
+                .parents('ul').css('display', 'block');
+        });
+
+    </script>
+    <script>
+        $(function () {
+            $('[data-toggle="tooltip"]').tooltip()
+        })
+    </script>
+    <script>
+        $(document).ready(function() {
+            $("#tg-sb-link").click(function() {
+                $("#tg-sb-sidebar").toggle();
+                $("#tg-sb-content").toggleClass('col-md-9');
+                $("#tg-sb-content").toggleClass('col-md-12');
+                $("#tg-sb-icon").toggleClass('fa-toggle-on');
+                $("#tg-sb-icon").toggleClass('fa-toggle-off');
+            });
+        });
+    </script>
+    
+
+</head>
+<body>
+<!-- Navigation -->
+<nav class="navbar navbar-inverse navbar-static-top">
+    <div class="container topnavlinks">
+        <div class="navbar-header">
+            <button type="button" class="navbar-toggle" data-toggle="collapse" data-target="#bs-example-navbar-collapse-1">
+                <span class="sr-only">Toggle navigation</span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+            </button>
+            <a class="fa fa-home fa-lg navbar-brand" href="/sniptool/">&nbsp;<span class="projectTitle">sniptool</span></a>
+        </div>
+        <div class="collapse navbar-collapse" id="bs-example-navbar-collapse-1">
+            <ul class="nav navbar-nav navbar-right">
+                <!-- toggle sidebar button -->
+                <li><a id="tg-sb-link" href="#"><i id="tg-sb-icon" class="fa fa-toggle-on"></i> Nav</a></li>
+                <!-- entries without drop-downs appear here -->
+
+
+
+
+                
+                
+                
+                <li><a href="https://github.com/suredream/sniptool/tree/master/" target="_blank">github</a></li>
+                
+                
+                
+                <!-- entries with drop-downs appear here -->
+                <!-- conditional logic to control which topnav appears for the audience defined in the configuration file.-->
+                
+                
+                
+                
+            </ul>
+        </div>
+        </div>
+        <!-- /.container -->
+</nav>
+
+<!-- Page Content -->
+<div class="container">
+  <div id="main">
+    <!-- Content Row -->
+    <div class="row">
+        
+        
+            <!-- Sidebar Column -->
+            <div class="col-md-3" id="tg-sb-sidebar">
+                
+
+
+<ul id="mysidebar" class="nav">
+  <li class="sidebarTitle"> </li>
+  
+  
+  
+  <li>
+      <a href="#">sniptool</a>
+      <ul>
+          
+          
+          
+          <li><a href="/sniptool/">Overview</a></li>
+          
+          
+          
+          
+          
+          
+          <li><a href="/sniptool/core.html">sniptool.core</a></li>
+          
+          
+          
+          
+          
+          
+          <li><a href="/sniptool/viz.html">visualization flow</a></li>
+          
+          
+          
+          
+          
+          
+          <li><a href="/sniptool/snip.html">Snippets Manager</a></li>
+          
+          
+          
+          
+          
+          
+          <li><a href="/sniptool/ver.html">Version Control</a></li>
+          
+          
+          
+          
+          
+          
+          <li><a href="/sniptool/misc.html">sniptool.misc</a></li>
+          
+          
+          
+          
+      </ul>
+   </li>
+     
+      
+      
+      <!-- if you aren't using the accordion, uncomment this block:
+         <p class="external">
+             <a href="#" id="collapseAll">Collapse All</a> | <a href="#" id="expandAll">Expand All</a>
+         </p>
+         -->
+</ul>
+
+<!-- this highlights the active parent class in the navgoco sidebar. this is critical so that the parent expands when you're viewing a page. This must appear below the sidebar code above. Otherwise, if placed inside customscripts.js, the script runs before the sidebar code runs and the class never gets inserted.-->
+<script>$("li.active").parents('li').toggleClass("active");</script>
+
+            </div>
+            
+        
+
+        <!-- Content Column -->
+        <div class="col-md-9" id="tg-sb-content">
+            <div class="post-header">
+    <a id="visualization flow"></a>
+    <h1 class="post-title-main">visualization flow</h1>
+    
+        
+    </div>
+
+
+
+<div class="post-content">
+
+   
+    <div class="summary">How to manage visual assets</div>
+   
+
+    
+    
+<!-- this handles the automatic toc. use ## for subheads to auto-generate the on-page minitoc. if you use html tags, you must supply an ID for the heading element in order for it to appear in the minitoc. -->
+<script>
+$( document ).ready(function() {
+  // Handler for .ready() called.
+
+$('#toc').toc({ minimumHeaders: 0, listType: 'ul', showSpeed: 0, headers: 'h2,h3,h4' });
+
+/* this offset helps account for the space taken up by the floating toolbar. */
+$('#toc').on('click', 'a', function() {
+  var target = $(this.getAttribute('href'))
+    , scroll_target = target.offset().top
+
+  $(window).scrollTop(scroll_target - 10);
+  return false
+})
+  
+});
+</script>
+
+<div id="toc"></div>
+
+    
+
+
+    
+
+   <!--
+
+#################################################
+### THIS FILE WAS AUTOGENERATED! DO NOT EDIT! ###
+#################################################
+# file to edit: 01_viz.ipynb
+# command to build the docs after a change: nbdev_build_docs
+
+-->
+
+<div class="container" id="notebook-container">
+        
+    
+    
+<div class="cell border-box-sizing code_cell rendered">
+
+</div>
+    
+
+    
+    
+<div class="cell border-box-sizing code_cell rendered">
+
+</div>
+    
+
+    
+    
+<div class="cell border-box-sizing code_cell rendered">
+
+<div class="output_wrapper">
+<div class="output">
+
+<div class="output_area">
+
+
+<div class="output_markdown rendered_html output_subarea ">
+<h3 id="Config" class="doc_header"><code>class</code> <code>Config</code><a href="https://github.com/fastai/fastcore/tree/master/fastcore/foundation.py#L250" class="source_link" style="float:right">[source]</a></h3><blockquote><p><code>Config</code>(<strong><code>cfg_path</code></strong>, <strong><code>cfg_name</code></strong>, <strong><code>create</code></strong>=<em><code>None</code></em>)</p>
+</blockquote>
+<p>Reading and writing <code>ConfigParser</code> ini files</p>
+
+</div>
+
+</div>
+
+</div>
+</div>
+
+</div>
+    
+
+    
+    
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="kn">import</span> <span class="nn">seaborn</span> <span class="k">as</span> <span class="nn">sns</span>
+
+<span class="n">sns</span><span class="o">.</span><span class="n">set</span><span class="p">(</span>
+    <span class="n">style</span><span class="o">=</span><span class="s2">&quot;white&quot;</span><span class="p">,</span>
+    <span class="n">palette</span><span class="o">=</span><span class="s2">&quot;muted&quot;</span><span class="p">,</span>
+    <span class="n">color_codes</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+    <span class="n">rc</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;figure.figsize&quot;</span><span class="p">:</span> <span class="p">(</span><span class="mf">11.7</span><span class="p">,</span> <span class="mf">8.27</span><span class="p">)},</span>
+<span class="p">)</span>
+</pre></div>
+
+    </div>
+</div>
+</div>
+
+</div>
+    
+
+    
+    
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="nn">pd</span>
+
+<span class="n">url</span> <span class="o">=</span> <span class="p">(</span>
+    <span class="s2">&quot;https://github.com/mattharrison/datasets/raw/master/&quot;</span>
+    <span class="s2">&quot;data/alta-noaa-1980-2019.csv&quot;</span>
+<span class="p">)</span>
+<span class="n">alta_df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="n">url</span><span class="p">)</span>
+<span class="n">dates</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">to_datetime</span><span class="p">(</span><span class="n">alta_df</span><span class="o">.</span><span class="n">DATE</span><span class="p">)</span>
+<span class="n">snow</span> <span class="o">=</span> <span class="n">alta_df</span><span class="o">.</span><span class="n">SNOW</span><span class="o">.</span><span class="n">rename</span><span class="p">(</span><span class="n">dates</span><span class="p">)</span>
+<span class="n">snow</span>
+</pre></div>
+
+    </div>
+</div>
+</div>
+
+<div class="output_wrapper">
+<div class="output">
+
+<div class="output_area">
+
+
+
+<div class="output_text output_subarea output_execute_result">
+<pre>1980-01-01    2.0
+1980-01-02    3.0
+1980-01-03    1.0
+1980-01-04    0.0
+1980-01-05    0.0
+             ... 
+2019-09-03    0.0
+2019-09-04    0.0
+2019-09-05    0.0
+2019-09-06    0.0
+2019-09-07    0.0
+Name: SNOW, Length: 14160, dtype: float64</pre>
+</div>
+
+</div>
+
+</div>
+</div>
+
+</div>
+    
+
+    
+    
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="n">snow</span><span class="o">.</span><span class="n">plot</span><span class="o">.</span><span class="n">hist</span><span class="p">()</span>
+</pre></div>
+
+    </div>
+</div>
+</div>
+
+<div class="output_wrapper">
+<div class="output">
+
+<div class="output_area">
+
+
+
+<div class="output_text output_subarea output_execute_result">
+<pre>&lt;AxesSubplot:ylabel=&#39;Frequency&#39;&gt;</pre>
+</div>
+
+</div>
+
+<div class="output_area">
+
+
+
+<div class="output_png output_subarea ">
+<img src="data:image/png;base64,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2bJlWbduXSqVSlatWpUkWbFiRRYuXJiurq7MmDEjK1euTJLccccdaWhoyNq1a3PJJZfkpptuGu6tAAAwRg17RPf39+fIkSPZv39/Dh8+nMOHD6e6ujoHDhzIrFmzkiTz589PV1dX+vr68uijj6axsfGo9STZsGFDWltbkyQtLS15+OGH09fXN9zbAQBgDKoe7g+sra3N4sWLM2/evJx00kl561vfmpqamtTV1Q28p66uLjt37syePXtSW1ub6urqo9aTpLu7e+B7qqurU1tbm927d2fKlCnDvSUAAMaYYb8S/aMf/Shf+cpX8u///u955JFHMm7cuHz7299+3vuqqqpSqVSOuf5Cxo3znCQAAENv2KvzkUceyXnnnZdTTz01EyZMyPz58/Od73wnu3btGnhPT09P6uvrM3ny5PT29qa/v/+o9SSpr68f+J7Dhw+nt7c3kyZNGu7tAAAwBg17RJ999tnZtGlTnn322VQqlXzrW9/KW9/61kycODFbtmxJkqxevTqzZ89OTU1NGhoa0tnZedR6ksyZMyerV69OknR2dqahoSE1NTXDvR0AAMagYb8n+h3veEf+67/+K/Pnz09NTU3++I//OFdddVUuvPDCLF26NPv27cv06dOzaNGiJMny5cvT3t6eu+++O1OnTs1tt92WJFm8eHHa29vT3NycU045JR0dHcO9FQAAxqiqyrFuPH4F2759ey644IKsX78+p59++rB//rzrHx/2zxwJa2+eOdIjAAC8ZMdrRk/iAQBAIRENAACFRDQAABQS0QAAUEhEAwBAIRENAACFRDQAABQS0QAAUEhEAwBAIRENAACFRDQAABQS0QAAUEhEAwBAIRENAACFRDQAABQS0QAAUEhEAwBAIRENAACFRDQAABQS0QAAUEhEAwBAIRENAACFRDQAABQS0QAAUEhEAwBAIRENAACFRDQAABQS0QAAUEhEAwBAIRENAACFBhXR9957b3p7e4d6FgAAOCEMKqJ/8pOfpLGxMTfeeGN+8IMfDPVMAAAwqg0qoj/2sY9l3bp1mTFjRlasWJEFCxbkgQceyMGDB4d6PgAAGHUGfU90bW1tmpqa0tLSkt/85jf54he/mKampnR1dQ3lfAAAMOpUD+ZNmzZtyqpVq7J58+Y0Njbmrrvuytlnn52f//znWbhwYZqamoZ6TgAAGDUGFdEf/ehHs3DhwnzsYx/LKaecMrD+ute9LpdeeumQDQcAAKPRoG7n+PrXv55JkybllFNOSU9PTz772c/myJEjSZJrr712SAcEAIDRZtAPFm7YsOG33zBuXLZs2ZKPf/zjQzkXAACMWoO6neN73/te1qxZkyQ59dRT88lPfjIXX3zxkA4GAACj1aCuRPf19eXQoUMDrw8fPjxkAwEAwGg3qCvRf/qnf5orr7wyF198caqqqrJmzZrMmTNnqGcDAIBRaVAR/eEPfzj33Xdf1q9fn+rq6lx44YW57LLLhno2AAAYlQYV0ePHj8+iRYuyaNGioZ4HAABGvUFFdGdnZzo6OvLMM8+kUqkMrH/3u98dssEAAGC0GlREf/KTn0x7e3umT5+eqqqqoZ4JAABGtUFF9Ktf/erMnTt3qGcBAIATwqB+xN3MmTOzcePGoZ4FAABOCIO6Er1x48Z84QtfSE1NTWpqalKpVFJVVeWeaAAAxqRBRfRnP/vZIR4DAABOHIO6nWPatGn5wQ9+kFWrVmXy5Mn53ve+l2nTpg31bAAAMCoNKqL/+Z//Of/6r/+arq6uHDhwIHfeeWfuuuuuoZ4NAABGpUFF9L/927/lX/7lX3LyySfnNa95TVatWpU1a9YM9WwAADAqDSqiq6urM2HChIHXr371q1NdPajbqQEA4BVnUCU8derUbNiwIVVVVTl06FDuuece90QDADBmDSqily1blg9/+MP58Y9/nFmzZmXmzJnp6OgY6tkAAGBUGlRET5kyJZ/73Oeyf//+9Pf3p7a2dqjnAgCAUWtQEf2Zz3zmmOt/+Zd/+bIOAwAAJ4JBRfRPfvKTgT8fOnQoW7ZsyTnnnDNkQwEAwGg2qIi++eabj3q9e/fufPjDHx6SgQAAYLQb1I+4e67Jkyfn6aeffrlnAQCAE0LxPdGVSiVPPPFETj311CEbCgAARrPie6KT3/7caLdzAAAwVr2ke6L/r771rW/lzjvvzLPPPpt3vOMdWbp0aTZt2pSbb745Bw8ezLx583LdddclSbZu3ZqlS5emt7c3DQ0NWbFiRaqrq7Njx44sWbIkv/71r/P6178+HR0d+b3f+72XdU4AADiWQUX0e9/73lRVVb3g1z//+c8P+gN/8YtfZPny5fnyl7+cU089Ne973/uycePGLF++PPfee2+mTp2av/mbv8nGjRszZ86cLFmyJP/v//2/zJo1KzfccENWrVqVhQsXZsWKFVm4cGGam5tz1113ZeXKlVmyZMmg5wAAgJdqUA8WzpgxIyeddFIWLVqUK6+8Mq997WszadKktLW1pa2tregDv/nNb+aiiy7Kaaedlpqamtx+++05+eSTc+aZZ+aMM85IdXV1Wltb09XVlaeffjoHDhzIrFmzkiTz589PV1dX+vr68uijj6axsfGodQAAGA6DuhL93e9+N1/84hczfvz4JMk73/nOXHrppQMRW+Kpp55KTU1NrrzyyvT09OT888/PWWedlbq6uoH31NfXZ+fOnenu7j5qva6uLjt37syePXtSW1ub6urqo9YBAGA4DCqid+/enUOHDuXkk09Okuzbty8HDhx4SR/Y39+fxx57LPfee29e9apX5e/+7u8G/t7/raqqKpVKpWgdAACGw6AiuqWlJZdeemkuvPDCVCqVrF27NosWLXpJH/ja17425513XiZPnpwkueCCC9LV1TVwlTtJuru7U19fnylTpmTXrl0D6z09Pamvr8/kyZPT29ub/v7+jB8/fmAdAACGw6DuiV68eHGuvfbaPPPMMzl48GA++tGPZuHChS/pA88///w88sgj2bt3b/r7+/Mf//EfaWpqypNPPpmnnnoq/f39WbNmTWbPnp1p06Zl4sSJ2bJlS5Jk9erVmT17dmpqatLQ0JDOzs6j1gEAYDgM6kp0kkyZMiVnnXVW5s+fnx/+8Icv+QNnzpyZv/qrv8rChQvT19eXt7/97bn88svzhje8Iddcc00OHjyYOXPmpKmpKUnS0dGRpUuXZt++fZk+ffrAFfDly5envb09d999d6ZOnZrbbrvtJc8EAAAlqirHusH4Ob7yla/k05/+dA4ePJj7778/LS0tue6663LppZcOx4wvq+3bt+eCCy7I+vXrc/rppw/758+7/vFh/8yRsPbmmSM9AgDAS3a8ZhzU7Rxf+MIXcv/996e2tjannnpqvvrVr+Zzn/vcyz4sAACcCAYV0ePGjUttbe3A66lTpx71ICAAAIwlg4roSZMmZevWrQM/Ru7rX/96fv/3f39IBwMAgNFqUA8W3nDDDVm8eHF+/vOf5x3veEcmTpyYlStXDvVsAAAwKg0qog8cOJAHH3ww27ZtS39/f17/+tenpqZmqGcDAIBRaVC3c/z93/99xo8fnze+8Y1505veJKABABjT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feUaS/ttGkN7Bf5venp6cuaZZz5v/YSN6Eql8ry1qqrj/5f2jBkzct9996Wuri7jx48fitEAADjB9ff3p6enJzNmzDjm10/YiJ4yZUoee+yxgdfd3d2pr68/7veddNJJaWhoGMrRAAB4BTjWFejfOWGfqnjb296WzZs3Z/fu3dm/f3++8Y1vZPbs2SM9FgAAY8AJfSX6uuuuy6JFi9LX15f3vOc9efOb3zzSYwEAMAZUVY51czEAAPCCTtjbOQAAYKSIaAAAKCSiAQCgkIgGAIBCInoYPPTQQ7noooty4YUX5r777hvpcU4oixYtSnNzcy6++OJcfPHFefzxx0d6pFGrt7c3LS0t2b59e5Jk06ZNaW1tzdy5c3P77beP8HSj13OP2/XXX5+5c+cOnHPf/OY3R3jC0enOO+9Mc3Nzmpubc+uttyZxzg3GsY6bc+74PvnJT+aiiy5Kc3NzPvOZzyRxvg3GsY6b8+1lVGFI/epXv6qcf/75lT179lT27dtXaW1trfz0pz8d6bFOCEeOHKm8/e1vr/T19Y30KKPef/7nf1ZaWloqf/RHf1T5xS9+Udm/f39lzpw5lZ///OeVvr6+yhVXXFHZsGHDSI856jz3uFUqlUpLS0tl586dIzzZ6Pbtb3+78hd/8ReVgwcPVg4dOlRZtGhR5aGHHnLOHcexjts3vvEN59xxfOc736lcdtlllb6+vsr+/fsr559/fmXr1q3Ot+M41nH72c9+5nx7GbkSPcQ2bdqUc889N5MmTcqrXvWqNDY2pqura6THOiH893//d6qqqvLXf/3X+bM/+7N84QtfGOmRRq1Vq1Zl+fLlA7+18/vf/37OPPPMnHHGGamurk5ra6vz7hiee9yeffbZ7NixI8uWLUtra2s+9alP5ciRIyM85ehTV1eX9vb2TJgwITU1NXnjG9+Ybdu2OeeO41jHbceOHc6543jrW9+az3/+86murs6vf/3r9Pf3Z+/evc634zjWcZs4caLz7WUkoodYd3d36urqBl7X19dn586dIzjRiWPv3r0577zzctddd+Wzn/1svvSlL+Xb3/72SI81Kt10001H/Tp7593gPPe4/frXv865556bj3/841m1alUee+yxPPDAAyM44eh01llnZdasWUmSbdu2pbOzM1VVVc654zjWcXvnO9/pnBuEmpqafOpTn0pzc3POO+88/44bpOcet/7+fufby0hED7HKMX6XTVVV1QhMcuJ5y1vekltvvTWvetWrMnny5LznPe/Jxo0bR3qsE4Lz7qU544wzctddd+XUU0/NySefnPe+973OuRfx05/+NFdccUU+8pGP5HWve93zvu6cO7b/fdze8IY3OOcG6dprr83mzZvzy1/+Mtu2bXve151vx/a/j9vmzZudby8jET3EpkyZkl27dg287u7uHvi/jnlxjz32WDZv3jzwulKppLr6hP1N9cPKeffS/PjHP866desGXjvnXtiWLVvy/ve/Px/60Ify7ne/2zk3SM89bs654/vZz36WrVu3JklOPvnkzJ07N9/5znecb8dxrOPW2dnpfHsZiegh9ra3vS2bN2/O7t27s3///nzjG9/I7NmzR3qsE8L//M//5NZbb83BgwfT29ubr33ta7nwwgtHeqwTwsyZM/Pkk0/mqaeeSn9/f9asWeO8G4RKpZKPf/zjeeaZZ9LX15f777/fOXcMv/zlL/OBD3wgHR0daW5uTuKcG4xjHTfn3PFt3749S5cuzaFDh3Lo0KGsX78+l112mfPtOI513P7kT/7E+fYy8p8fQ2zKlCm57rrrsmjRovT19eU973lP3vzmN4/0WCeE888/P48//nj+/M//PEeOHMnChQvzlre8ZaTHOiFMnDgxt9xyS6655pocPHgwc+bMSVNT00iPNeqdffbZueqqq3L55Zfn8OHDmTt3blpaWkZ6rFHnnnvuycGDB3PLLbcMrF122WXOueN4oePmnHtxc+bMGfjfgvHjx2fu3Llpbm7O5MmTnW8v4ljH7YMf/GBe85rXON9eJlWVY908CQAAvCC3cwAAQCERDQAAhUQ0AAAUEtEAAFBIRAMAQCERDQAAhUQ0AAAUEtEAAFDo/wfPwmE7GM4SXAAAAABJRU5ErkJggg==
+"
+>
+</div>
+
+</div>
+
+</div>
+</div>
+
+</div>
+    
+
+    
+    
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="o">!</span>nbdev_build_lib --fname 01_viz.ipynb
+</pre></div>
+
+    </div>
+</div>
+</div>
+
+<div class="output_wrapper">
+<div class="output">
+
+<div class="output_area">
+
+<div class="output_subarea output_stream output_stdout output_text">
+<pre>Converted 01_viz.ipynb.
+</pre>
+</div>
+</div>
+
+</div>
+</div>
+
+</div>
+    
+
+    
+    
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="o">%</span><span class="k">load_ext</span> autoreload
+<span class="o">%</span><span class="k">autoreload</span> 2
+</pre></div>
+
+    </div>
+</div>
+</div>
+
+<div class="output_wrapper">
+<div class="output">
+
+<div class="output_area">
+
+<div class="output_subarea output_stream output_stdout output_text">
+<pre>The autoreload extension is already loaded. To reload it, use:
+  %reload_ext autoreload
+</pre>
+</div>
+</div>
+
+</div>
+</div>
+
+</div>
+    
+
+    
+    
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="o">%</span><span class="k">reload_ext</span> sniptool
+</pre></div>
+
+    </div>
+</div>
+</div>
+
+</div>
+    
+
+    
+    
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="o">%</span><span class="k">sa</span>
+</pre></div>
+
+    </div>
+</div>
+</div>
+
+<div class="output_wrapper">
+<div class="output">
+
+<div class="output_area">
+
+<div class="output_subarea output_stream output_stdout output_text">
+<pre>nb_list [&#39;00_core.ipynb&#39;, &#39;03_ver.ipynb&#39;, &#39;01_viz.ipynb&#39;, &#39;02_snip.ipynb&#39;, &#39;index.ipynb&#39;] *.ipynb
+00_core.ipynb01_viz.ipynb-- img/test1.png created.
+</pre>
+</div>
+</div>
+
+</div>
+</div>
+
+</div>
+    
+
+    
+    
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="o">!</span>nbdev_build_lib
+</pre></div>
+
+    </div>
+</div>
+</div>
+
+<div class="output_wrapper">
+<div class="output">
+
+<div class="output_area">
+
+<div class="output_subarea output_stream output_stdout output_text">
+<pre>Converted 00_core.ipynb.
+Converted 01_viz.ipynb.
+Converted 02_snip.ipynb.
+Converted 03_ver.ipynb.
+Converted index.ipynb.
+</pre>
+</div>
+</div>
+
+</div>
+</div>
+
+</div>
+    
+
+    
+    
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="kn">from</span> <span class="nn">glob</span> <span class="kn">import</span> <span class="n">glob</span>
+<span class="n">glob</span><span class="p">(</span><span class="s1">&#39;*.ipynb&#39;</span><span class="p">)</span>
+</pre></div>
+
+    </div>
+</div>
+</div>
+
+<div class="output_wrapper">
+<div class="output">
+
+<div class="output_area">
+
+
+
+<div class="output_text output_subarea output_execute_result">
+<pre>[&#39;00_core.ipynb&#39;,
+ &#39;03_ver.ipynb&#39;,
+ &#39;01_viz.ipynb&#39;,
+ &#39;02_snip.ipynb&#39;,
+ &#39;index.ipynb&#39;]</pre>
+</div>
+
+</div>
+
+</div>
+</div>
+
+</div>
+    
+
+</div>
+ 
+
+
+
+    <div class="tags">
+        
+    </div>
+
+</div>
+
+
+
+<footer>
+            <div class="row">
+                <div class="col-lg-12 footer">
+                  <p><img src="/sniptool/assets/images/company_logo.png" alt="Company logo"/></p>
+               &copy;2022 copyright. All rights reserved. <br />
+ Site last generated: Apr 10, 2022 <br />
+                </div>
+            </div>
+</footer>
+
+
+        </div>
+    <!-- /.row -->
+</div>
+<!-- /.container -->
+</div>
+<!-- /#main -->
+    </div>
+
+</body>
+
+</html>
