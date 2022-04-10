@@ -8,10 +8,13 @@ import datetime
 import pandas as pd
 from glob import glob
 from IPython.core.magic import Magics, magics_class, line_magic, cell_magic
+
+
 def getmtime_ms(path):
     mtime = os.path.getmtime(path)
     stamp = datetime.datetime.fromtimestamp(mtime, tz=datetime.timezone.utc)
     return int(round(stamp.timestamp()))
+
 
 def get_change_file(regex, last, this):
     if not os.path.isfile(last):
@@ -23,13 +26,16 @@ def get_change_file(regex, last, this):
           .sort_values(by='path')
           .to_csv(this, sep='|', index=False, header=False))
 #     print(f'diff -y --suppress-common-lines {last} {this}')
-    diff_ret = os.popen(f'diff -y --suppress-common-lines {last} {this}').read()
+    diff_ret = os.popen(
+        f'diff -y --suppress-common-lines {last} {this}').read()
     for line in diff_ret.splitlines():
         file = line.split('|')[0].split()[-1]
         yield file
     os.rename(this, last)
 
 # Internal Cell
+
+
 @magics_class
 class MiscMagics(Magics):
     """snip magic for snippets management.
@@ -43,13 +49,14 @@ class MiscMagics(Magics):
             """Yield successive n-sized chunks from lst."""
             r = int(len(names) / n + 0.5)
             for i in range(0, len(names), r):
-                yield names[i : i + r]
+                yield names[i: i + r]
 
         def output(items, n_cols=5):
             newcolumns = list(chunks(items, n_cols))
             n_rows, n_columns = len(newcolumns[0]), len(newcolumns)
             newcolumns[-1].extend([""] * (n_rows * n_columns - len(items)))
-            array_outputs = [[row[i] for row in newcolumns] for i in range(n_rows)]
+            array_outputs = [[row[i] for row in newcolumns]
+                             for i in range(n_rows)]
             col_width = (
                 max(len(word) for row in array_outputs for word in row) + 2
             )  # padding
