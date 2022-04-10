@@ -1,6 +1,10 @@
 {
   "sniptool": {
     "Overview": "/",
-    "sniptool": "core.html"
+    "sniptool.core": "core.html",
+    "visualization flow": "viz.html",
+    "Snippets Manager": "snip.html",
+    "Version Control": "ver.html",
+    "sniptool.misc": "misc.html"
   }
 }

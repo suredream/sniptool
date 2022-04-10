@@ -1,13 +1,13 @@
 ---
 
-title: sniptool
+title: sniptool.core
 
 
 keywords: fastai
 sidebar: home_sidebar
 
-summary: "API details."
-description: "API details."
+summary: "magic commands for snippets management, supported by a sqlite db."
+description: "magic commands for snippets management, supported by a sqlite db."
 nb_path: "00_core.ipynb"
 ---
 <!--
@@ -36,8 +36,204 @@ nb_path: "00_core.ipynb"
 
 <div class="inner_cell">
     <div class="input_area">
-<div class=" highlight hl-ipython3"><pre><span></span><span class="o">!</span>nbdev_build_lib
-<span class="o">!</span>nbdev_build_docs
+<div class=" highlight hl-ipython3"><pre><span></span><span class="kn">import</span> <span class="nn">base64</span>
+<span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">import</span> <span class="nn">sys</span>
+<span class="kn">import</span> <span class="nn">json</span>
+<span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="nn">pd</span>
+<span class="kn">import</span> <span class="nn">yaml</span>
+<span class="kn">import</span> <span class="nn">logging</span>
+<span class="kn">import</span> <span class="nn">pycodestyle</span> <span class="k">as</span> <span class="nn">pycodestyle_module</span>
+<span class="kn">import</span> <span class="nn">tempfile</span>
+<span class="kn">from</span> <span class="nn">glob</span> <span class="kn">import</span> <span class="n">glob</span>
+<span class="kn">from</span> <span class="nn">PIL</span> <span class="kn">import</span> <span class="n">Image</span>
+<span class="kn">from</span> <span class="nn">io</span> <span class="kn">import</span> <span class="n">BytesIO</span><span class="p">,</span> <span class="n">StringIO</span>
+<span class="kn">from</span> <span class="nn">os.path</span> <span class="kn">import</span> <span class="n">expanduser</span>
+<span class="kn">from</span> <span class="nn">pathlib</span> <span class="kn">import</span> <span class="n">Path</span>
+<span class="kn">from</span> <span class="nn">pygments</span> <span class="kn">import</span> <span class="n">highlight</span>
+<span class="kn">from</span> <span class="nn">pygments.lexers</span> <span class="kn">import</span> <span class="n">PythonLexer</span>
+<span class="kn">from</span> <span class="nn">pygments.formatters</span> <span class="kn">import</span> <span class="n">HtmlFormatter</span>
+<span class="kn">from</span> <span class="nn">IPython.core.display</span> <span class="kn">import</span> <span class="n">HTML</span><span class="p">,</span> <span class="n">display</span>
+<span class="kn">from</span> <span class="nn">IPython.core.magic</span> <span class="kn">import</span> <span class="n">Magics</span><span class="p">,</span> <span class="n">magics_class</span><span class="p">,</span> <span class="n">line_magic</span><span class="p">,</span> <span class="n">cell_magic</span>
+<span class="kn">from</span> <span class="nn">sqlalchemy</span> <span class="kn">import</span> <span class="n">create_engine</span><span class="p">,</span> <span class="n">Column</span><span class="p">,</span> <span class="n">String</span><span class="p">,</span> <span class="n">Float</span><span class="p">,</span> <span class="n">Text</span>
+<span class="kn">from</span> <span class="nn">sqlalchemy.dialects.sqlite</span> <span class="kn">import</span> <span class="n">insert</span><span class="p">,</span> <span class="n">dialect</span>
+<span class="kn">from</span> <span class="nn">sqlalchemy.ext.declarative</span> <span class="kn">import</span> <span class="n">declarative_base</span>
+
+<span class="n">Base</span> <span class="o">=</span> <span class="n">declarative_base</span><span class="p">()</span>
+</pre></div>
+
+    </div>
+</div>
+</div>
+
+</div>
+    {% endraw %}
+
+    {% raw %}
+    
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="k">class</span> <span class="nc">NBfiles</span><span class="p">(</span><span class="n">Base</span><span class="p">):</span>
+    <span class="n">__tablename__</span> <span class="o">=</span> <span class="s2">&quot;nbfiles&quot;</span>
+    <span class="n">path</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="n">String</span><span class="p">(</span><span class="mi">256</span><span class="p">),</span> <span class="n">primary_key</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="n">mtime</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="n">Float</span><span class="p">(</span><span class="mi">64</span><span class="p">))</span>
+
+
+<span class="k">class</span> <span class="nc">Snippets</span><span class="p">(</span><span class="n">Base</span><span class="p">):</span>
+    <span class="n">__tablename__</span> <span class="o">=</span> <span class="s2">&quot;snippets&quot;</span>
+    <span class="n">tags</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="n">String</span><span class="p">(</span><span class="mi">256</span><span class="p">))</span>
+    <span class="n">desc</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="n">String</span><span class="p">(</span><span class="mi">256</span><span class="p">),</span> <span class="n">primary_key</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="n">source</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="n">Text</span><span class="p">)</span>
+    <span class="n">url</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="n">String</span><span class="p">(</span><span class="mi">256</span><span class="p">))</span>
+
+
+<span class="k">def</span> <span class="nf">_snippet_parser</span><span class="p">(</span><span class="n">path</span><span class="p">):</span>
+    <span class="n">sys</span><span class="o">.</span><span class="n">stdout</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;updating snippets from </span><span class="si">{</span><span class="n">path</span><span class="si">}</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="n">sys</span><span class="o">.</span><span class="n">stdout</span><span class="o">.</span><span class="n">flush</span><span class="p">()</span>
+    <span class="n">notebook</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="nb">open</span><span class="p">(</span><span class="n">path</span><span class="p">))</span>
+
+    <span class="k">for</span> <span class="n">cell</span> <span class="ow">in</span> <span class="n">notebook</span><span class="p">[</span><span class="s2">&quot;cells&quot;</span><span class="p">]:</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">cell</span><span class="p">[</span><span class="s2">&quot;source&quot;</span><span class="p">]:</span>
+            <span class="k">continue</span>
+        <span class="n">head</span> <span class="o">=</span> <span class="n">cell</span><span class="p">[</span><span class="s2">&quot;source&quot;</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span>
+        <span class="k">if</span> <span class="n">head</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">&quot;# @&quot;</span><span class="p">):</span>
+            <span class="n">desc</span><span class="p">,</span> <span class="o">*</span><span class="n">tags</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">head</span><span class="o">.</span><span class="n">lstrip</span><span class="p">(</span><span class="s2">&quot;# @&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;#&quot;</span><span class="p">))</span>
+            <span class="n">tags</span> <span class="o">=</span> <span class="s2">&quot;;&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">tags</span><span class="p">)</span> <span class="k">if</span> <span class="n">tags</span> <span class="k">else</span> <span class="s2">&quot;&quot;</span>
+            <span class="n">source</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">cell</span><span class="p">[</span><span class="s2">&quot;source&quot;</span><span class="p">][</span><span class="mi">1</span><span class="p">:])</span>
+            <span class="n">url</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>
+            <span class="k">yield</span> <span class="p">(</span>
+                <span class="nb">dict</span><span class="p">(</span>
+                    <span class="n">tags</span><span class="o">=</span><span class="n">tags</span><span class="p">,</span>
+                    <span class="n">desc</span><span class="o">=</span><span class="n">desc</span><span class="p">,</span>
+                    <span class="n">source</span><span class="o">=</span><span class="n">source</span><span class="p">,</span>
+                    <span class="n">url</span><span class="o">=</span><span class="n">url</span><span class="p">,</span>
+                <span class="p">)</span>
+            <span class="p">)</span>
+
+
+<span class="k">def</span> <span class="nf">_get_file_list</span><span class="p">(</span><span class="n">targets</span><span class="p">,</span> <span class="n">exclude</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;__pycache__&quot;</span><span class="p">,</span> <span class="s2">&quot;.ipynb_checkpoints&quot;</span><span class="p">]):</span>
+    <span class="sd">&quot;&quot;&quot; &quot;</span>
+<span class="sd">    This function recursively prints all contents of a pathlib.Path object</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="kn">import</span> <span class="nn">configparser</span>
+
+    <span class="n">nb_list</span> <span class="o">=</span> <span class="p">[(</span><span class="kc">None</span><span class="p">,</span> <span class="kc">None</span><span class="p">)]</span>
+    <span class="k">for</span> <span class="n">target</span> <span class="ow">in</span> <span class="n">targets</span><span class="p">:</span>
+        <span class="n">target</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">target</span><span class="p">)</span>
+        <span class="n">cfg1</span><span class="p">,</span> <span class="n">cfg2</span> <span class="o">=</span> <span class="n">target</span> <span class="o">/</span> <span class="s2">&quot;ghconfig&quot;</span><span class="p">,</span> <span class="n">target</span> <span class="o">/</span> <span class="s2">&quot;.git/config&quot;</span>
+        <span class="k">if</span> <span class="n">cfg1</span><span class="o">.</span><span class="n">is_file</span><span class="p">():</span>  <span class="c1"># has ghconfig</span>
+            <span class="n">cfg</span> <span class="o">=</span> <span class="n">yaml</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="nb">open</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">cfg1</span><span class="p">)),</span> <span class="n">Loader</span><span class="o">=</span><span class="n">yaml</span><span class="o">.</span><span class="n">BaseLoader</span><span class="p">)</span>
+            <span class="n">root</span> <span class="o">=</span> <span class="n">cfg</span><span class="p">[</span><span class="s2">&quot;repo&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">rstrip</span><span class="p">(</span><span class="s2">&quot;.git&quot;</span><span class="p">)</span> <span class="o">+</span> <span class="s2">&quot;/&quot;</span> <span class="o">+</span> <span class="n">target</span><span class="o">.</span><span class="n">name</span>
+        <span class="k">elif</span> <span class="n">cfg2</span><span class="o">.</span><span class="n">is_file</span><span class="p">():</span>
+            <span class="n">config</span> <span class="o">=</span> <span class="n">configparser</span><span class="o">.</span><span class="n">ConfigParser</span><span class="p">()</span>
+            <span class="n">config</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">cfg2</span><span class="p">))</span>
+            <span class="n">root</span> <span class="o">=</span> <span class="n">config</span><span class="p">[</span><span class="s1">&#39;remote &quot;origin&quot;&#39;</span><span class="p">][</span><span class="s2">&quot;url&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">rstrip</span><span class="p">(</span><span class="s2">&quot;.git&quot;</span><span class="p">)</span> <span class="o">+</span> <span class="s2">&quot;/&quot;</span> <span class="o">+</span> <span class="n">target</span><span class="o">.</span><span class="n">name</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">root</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="k">for</span> <span class="n">e</span> <span class="ow">in</span> <span class="n">exclude</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">target</span><span class="o">.</span><span class="n">name</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="n">e</span><span class="p">)</span> <span class="o">!=</span> <span class="o">-</span><span class="mi">1</span><span class="p">:</span>
+                <span class="k">return</span> <span class="nb">list</span><span class="p">(</span><span class="nb">map</span><span class="p">(</span><span class="nb">list</span><span class="p">,</span> <span class="nb">zip</span><span class="p">(</span><span class="o">*</span><span class="n">nb_list</span><span class="p">)))</span>
+        <span class="k">for</span> <span class="n">file</span> <span class="ow">in</span> <span class="n">target</span><span class="o">.</span><span class="n">iterdir</span><span class="p">():</span>
+            <span class="k">if</span> <span class="n">file</span><span class="o">.</span><span class="n">is_dir</span><span class="p">():</span>
+                <span class="k">if</span> <span class="s2">&quot;.&quot;</span> <span class="ow">in</span> <span class="n">file</span><span class="o">.</span><span class="n">name</span><span class="p">:</span>
+                    <span class="k">continue</span>
+                <span class="n">nb_list</span> <span class="o">+=</span> <span class="n">_get_file_list</span><span class="p">([</span><span class="n">file</span><span class="o">.</span><span class="n">absolute</span><span class="p">()</span><span class="o">.</span><span class="n">as_posix</span><span class="p">()],</span> <span class="n">exclude</span><span class="o">=</span><span class="n">exclude</span><span class="p">)</span>
+            <span class="k">elif</span> <span class="n">file</span><span class="o">.</span><span class="n">name</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="s2">&quot;.ipynb&quot;</span><span class="p">):</span>
+                <span class="n">nb_list</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">file</span><span class="o">.</span><span class="n">absolute</span><span class="p">()</span><span class="o">.</span><span class="n">as_posix</span><span class="p">(),</span> <span class="n">root</span><span class="p">))</span>
+    <span class="c1"># remove invalid lines</span>
+    <span class="n">nb_list</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="nb">filter</span><span class="p">(</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">x</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">nb_list</span><span class="p">))</span>
+    <span class="k">return</span> <span class="nb">list</span><span class="p">(</span><span class="nb">map</span><span class="p">(</span><span class="nb">list</span><span class="p">,</span> <span class="nb">zip</span><span class="p">(</span><span class="o">*</span><span class="n">nb_list</span><span class="p">)))</span>
+
+
+<span class="c1"># _get_file_list([&#39;/home/jovyan/helper&#39;], exclude=[&#39;.ipynb_checkpoints&#39;])</span>
+
+<span class="c1"># def _compile_query(query):</span>
+<span class="c1">#     compiler = (</span>
+<span class="c1">#         query.compile if not hasattr(</span>
+<span class="c1">#             query, &quot;statement&quot;) else query.statement.compile</span>
+<span class="c1">#     )</span>
+<span class="c1">#     return compiler(dialect=dialect())</span>
+
+
+<span class="k">def</span> <span class="nf">_get_snippets_file_list</span><span class="p">(</span><span class="n">dirs</span><span class="p">):</span>
+    <span class="n">include</span> <span class="o">=</span> <span class="p">[</span><span class="n">d</span> <span class="k">for</span> <span class="n">d</span> <span class="ow">in</span> <span class="n">dirs</span> <span class="k">if</span> <span class="ow">not</span> <span class="n">d</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">&quot;!&quot;</span><span class="p">)]</span>
+    <span class="n">exclude</span> <span class="o">=</span> <span class="p">[</span><span class="n">d</span><span class="p">[</span><span class="mi">1</span><span class="p">:]</span> <span class="k">for</span> <span class="n">d</span> <span class="ow">in</span> <span class="n">dirs</span> <span class="k">if</span> <span class="n">d</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">&quot;!&quot;</span><span class="p">)]</span>
+    <span class="n">nb_list</span><span class="p">,</span> <span class="n">links</span> <span class="o">=</span> <span class="n">_get_file_list</span><span class="p">(</span><span class="n">include</span><span class="p">,</span> <span class="n">exclude</span><span class="p">)</span>
+    <span class="n">mtime</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="nb">map</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">getmtime</span><span class="p">,</span> <span class="n">nb_list</span><span class="p">))</span>
+    <span class="k">return</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="nb">zip</span><span class="p">(</span><span class="n">nb_list</span><span class="p">,</span> <span class="n">mtime</span><span class="p">,</span> <span class="n">links</span><span class="p">),</span> <span class="n">columns</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;path&quot;</span><span class="p">,</span> <span class="s2">&quot;mtime&quot;</span><span class="p">,</span> <span class="s2">&quot;url&quot;</span><span class="p">])</span>
+
+
+<span class="k">def</span> <span class="nf">_disp</span><span class="p">(</span><span class="n">snippets</span><span class="p">,</span> <span class="n">short</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+    <span class="n">display</span><span class="p">(</span>
+        <span class="n">HTML</span><span class="p">(</span>
+            <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    &lt;style&gt;</span>
+<span class="sd">    {pygments_css}</span>
+<span class="sd">    &lt;/style&gt;</span>
+<span class="sd">    &quot;&quot;&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+                <span class="n">pygments_css</span><span class="o">=</span><span class="n">HtmlFormatter</span><span class="p">()</span><span class="o">.</span><span class="n">get_style_defs</span><span class="p">(</span><span class="s2">&quot;.highlight&quot;</span><span class="p">)</span>
+            <span class="p">)</span>
+        <span class="p">)</span>
+    <span class="p">)</span>
+
+    <span class="k">for</span> <span class="n">_</span><span class="p">,</span> <span class="n">row</span> <span class="ow">in</span> <span class="n">snippets</span><span class="o">.</span><span class="n">iterrows</span><span class="p">():</span>
+        <span class="k">if</span> <span class="n">short</span><span class="p">:</span>
+            <span class="n">content</span> <span class="o">=</span> <span class="n">row</span><span class="p">[</span><span class="s2">&quot;desc&quot;</span><span class="p">]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">content</span> <span class="o">=</span> <span class="n">row</span><span class="p">[</span><span class="s2">&quot;desc&quot;</span><span class="p">]</span> <span class="o">+</span> <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span> <span class="o">+</span> <span class="n">row</span><span class="p">[</span><span class="s2">&quot;source&quot;</span><span class="p">][:</span><span class="mi">80</span><span class="p">]</span>
+        <span class="n">display</span><span class="p">(</span>
+            <span class="n">HTML</span><span class="p">(</span><span class="n">data</span><span class="o">=</span><span class="n">highlight</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;(</span><span class="si">{</span><span class="n">_</span><span class="si">}</span><span class="s2">)&quot;</span> <span class="o">+</span> <span class="n">content</span><span class="p">,</span> <span class="n">PythonLexer</span><span class="p">(),</span> <span class="n">HtmlFormatter</span><span class="p">()))</span>
+        <span class="p">)</span>
+
+
+<span class="k">def</span> <span class="nf">_upsert</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="n">conn</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">model</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+    <span class="n">table</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">__table__</span>
+    <span class="n">stmt</span> <span class="o">=</span> <span class="n">insert</span><span class="p">(</span><span class="n">table</span><span class="p">)</span><span class="o">.</span><span class="n">values</span><span class="p">(</span><span class="n">df</span><span class="o">.</span><span class="n">to_dict</span><span class="p">(</span><span class="n">orient</span><span class="o">=</span><span class="s2">&quot;records&quot;</span><span class="p">))</span>
+    <span class="n">update_cols</span> <span class="o">=</span> <span class="p">[</span><span class="n">c</span><span class="o">.</span><span class="n">name</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">table</span><span class="o">.</span><span class="n">c</span> <span class="k">if</span> <span class="n">c</span> <span class="ow">not</span> <span class="ow">in</span> <span class="nb">list</span><span class="p">(</span><span class="n">table</span><span class="o">.</span><span class="n">primary_key</span><span class="o">.</span><span class="n">columns</span><span class="p">)]</span>
+    <span class="n">on_conflict_stmt</span> <span class="o">=</span> <span class="n">stmt</span><span class="o">.</span><span class="n">on_conflict_do_update</span><span class="p">(</span>
+        <span class="n">index_elements</span><span class="o">=</span><span class="n">table</span><span class="o">.</span><span class="n">primary_key</span><span class="o">.</span><span class="n">columns</span><span class="p">,</span>
+        <span class="n">set_</span><span class="o">=</span><span class="p">{</span><span class="n">c</span><span class="o">.</span><span class="n">key</span><span class="p">:</span> <span class="n">c</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">stmt</span><span class="o">.</span><span class="n">excluded</span> <span class="k">if</span> <span class="n">c</span><span class="o">.</span><span class="n">key</span> <span class="ow">in</span> <span class="n">update_cols</span><span class="p">},</span>
+    <span class="p">)</span>
+    <span class="n">conn</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="n">on_conflict_stmt</span><span class="p">)</span>
+</pre></div>
+
+    </div>
+</div>
+</div>
+
+</div>
+    {% endraw %}
+
+    {% raw %}
+    
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="o">%%</span><span class="k">pep8</span>
+def test(df, top=5):
+    print(df.head(top))
+
+
+def get_value(df, pos=3):
+    return df.iloc[pos][&quot;b&quot;]
+
+
+
+
+
+
+
+
+
+a, b = np.arange(10), np.arange(10)
+# df = pd.DataFrame(zip(a, b), columns=[&quot;a&quot;, &quot;b&quot;])
+df = pd.DataFrame(None, columns=[&quot;a&quot;, &quot;b&quot;])
+df
 </pre></div>
 
     </div>
@@ -50,10 +246,7 @@ nb_path: "00_core.ipynb"
 <div class="output_area">
 
 <div class="output_subarea output_stream output_stdout output_text">
-<pre>Converted 00_core.ipynb.
-Converted index.ipynb.
-converting: /home/jovyan/guide/sniptool/00_core.ipynb
-converting /home/jovyan/guide/sniptool/index.ipynb to README.md
+<pre>17:1: E303 too many blank lines (9)
 </pre>
 </div>
 </div>
@@ -71,10 +264,381 @@ converting /home/jovyan/guide/sniptool/index.ipynb to README.md
 
 <div class="inner_cell">
     <div class="input_area">
-<div class=" highlight hl-ipython3"><pre><span></span><span class="o">!</span>pip install -e .
+<div class=" highlight hl-ipython3"><pre><span></span><span class="n">df</span><span class="o">.</span><span class="n">empty</span>
 </pre></div>
 
     </div>
+</div>
+</div>
+
+<div class="output_wrapper">
+<div class="output">
+
+<div class="output_area">
+
+
+
+<div class="output_text output_subarea output_execute_result">
+<pre>True</pre>
+</div>
+
+</div>
+
+</div>
+</div>
+
+</div>
+    {% endraw %}
+
+    {% raw %}
+    
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="nd">@magics_class</span>
+<span class="k">class</span> <span class="nc">SnippetsMagics</span><span class="p">(</span><span class="n">Magics</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;snip magic for snippets management.</span>
+<span class="sd">    Provides the %snip magic.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">shell</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">SnippetsMagics</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">shell</span><span class="o">=</span><span class="n">shell</span><span class="p">)</span>
+        <span class="n">dotfile</span> <span class="o">=</span> <span class="s2">&quot;~/config.yaml&quot;</span>
+        <span class="n">cfg</span> <span class="o">=</span> <span class="n">yaml</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="nb">open</span><span class="p">(</span><span class="n">expanduser</span><span class="p">(</span><span class="n">dotfile</span><span class="p">)),</span> <span class="n">Loader</span><span class="o">=</span><span class="n">yaml</span><span class="o">.</span><span class="n">BaseLoader</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">db</span> <span class="o">=</span> <span class="n">cfg</span><span class="p">[</span><span class="s2">&quot;config_dir&quot;</span><span class="p">]</span> <span class="o">+</span> <span class="s2">&quot;/SnippetDB.db&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">search_dirs</span> <span class="o">=</span> <span class="n">cfg</span><span class="p">[</span><span class="s2">&quot;search_dirs&quot;</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">engine</span> <span class="o">=</span> <span class="n">create_engine</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;sqlite:///</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">db</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="n">Base</span><span class="o">.</span><span class="n">metadata</span><span class="o">.</span><span class="n">create_all</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">engine</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">snippets</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_sql</span><span class="p">(</span><span class="s2">&quot;snippets&quot;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">engine</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">update</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">nb_to_search</span> <span class="o">=</span> <span class="n">_get_snippets_file_list</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">search_dirs</span><span class="p">)</span>
+        <span class="n">nb_exists</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_sql</span><span class="p">(</span><span class="s2">&quot;nbfiles&quot;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">engine</span><span class="p">)</span><span class="o">.</span><span class="n">rename</span><span class="p">(</span>
+            <span class="n">columns</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;mtime&quot;</span><span class="p">:</span> <span class="s2">&quot;utime&quot;</span><span class="p">}</span>
+        <span class="p">)</span>
+        <span class="c1">#         print(nb_to_search, nb_exists, nb_exists.empty)</span>
+        <span class="k">if</span> <span class="n">nb_exists</span><span class="o">.</span><span class="n">empty</span><span class="p">:</span>
+            <span class="n">nb_to_update</span> <span class="o">=</span> <span class="n">nb_to_search</span><span class="o">.</span><span class="n">assign</span><span class="p">(</span><span class="n">isnew</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">nb_to_update</span> <span class="o">=</span> <span class="p">(</span>
+                <span class="n">nb_exists</span><span class="o">.</span><span class="n">merge</span><span class="p">(</span><span class="n">nb_to_search</span><span class="p">,</span> <span class="n">how</span><span class="o">=</span><span class="s2">&quot;right&quot;</span><span class="p">)</span>
+                <span class="o">.</span><span class="n">fillna</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+                <span class="o">.</span><span class="n">assign</span><span class="p">(</span><span class="n">isnew</span><span class="o">=</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">x</span><span class="o">.</span><span class="n">mtime</span> <span class="o">&gt;</span> <span class="n">x</span><span class="o">.</span><span class="n">utime</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span>
+                <span class="o">.</span><span class="n">query</span><span class="p">(</span><span class="s2">&quot;isnew == True&quot;</span><span class="p">)</span>
+            <span class="p">)</span>
+        <span class="k">if</span> <span class="n">nb_to_update</span><span class="o">.</span><span class="n">empty</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;nothing update.&#39;</span><span class="p">)</span>
+            <span class="k">return</span>
+        <span class="n">nestedList</span> <span class="o">=</span> <span class="n">nb_to_update</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">apply</span><span class="p">(</span><span class="n">_snippet_parser</span><span class="p">)</span><span class="o">.</span><span class="n">to_list</span><span class="p">()</span>
+        <span class="p">(</span>
+            <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">([</span><span class="n">item</span> <span class="k">for</span> <span class="n">sublist</span> <span class="ow">in</span> <span class="n">nestedList</span> <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="n">sublist</span><span class="p">])</span>
+            <span class="o">.</span><span class="n">pipe</span><span class="p">(</span>
+                <span class="n">_upsert</span><span class="p">,</span> <span class="n">conn</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">engine</span><span class="p">,</span> <span class="n">model</span><span class="o">=</span><span class="n">Snippets</span>
+            <span class="p">)</span>
+        <span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">nb_to_update</span><span class="o">.</span><span class="n">empty</span><span class="p">:</span>
+            <span class="p">(</span>
+                <span class="n">nb_to_update</span><span class="p">[[</span><span class="s2">&quot;path&quot;</span><span class="p">,</span> <span class="s2">&quot;mtime&quot;</span><span class="p">]]</span><span class="o">.</span><span class="n">pipe</span><span class="p">(</span>
+                    <span class="n">_upsert</span><span class="p">,</span> <span class="n">conn</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">engine</span><span class="p">,</span> <span class="n">model</span><span class="o">=</span><span class="n">NBfiles</span>
+                <span class="p">)</span>
+            <span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">snippets</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_sql</span><span class="p">(</span><span class="s2">&quot;snippets&quot;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">engine</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">reset</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">engine</span><span class="o">.</span><span class="n">dispose</span><span class="p">()</span>
+        <span class="n">os</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">db</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">engine</span> <span class="o">=</span> <span class="n">create_engine</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;sqlite:///</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">db</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="n">Base</span><span class="o">.</span><span class="n">metadata</span><span class="o">.</span><span class="n">create_all</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">engine</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">update</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="nf">info</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">snippets</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_sql</span><span class="p">(</span><span class="s2">&quot;snippets&quot;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">engine</span><span class="p">)</span>
+        <span class="n">nb_exists</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_sql</span><span class="p">(</span><span class="s2">&quot;nbfiles&quot;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">engine</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span>
+            <span class="s2">&quot;</span><span class="si">{}</span><span class="s2"> snippets, </span><span class="si">{}</span><span class="s2"> notebooks in SnippetDB&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+                <span class="n">snippets</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">nb_exists</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="p">)</span>
+        <span class="p">)</span>
+
+    <span class="nd">@line_magic</span>
+    <span class="k">def</span> <span class="nf">snip</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">parameter_s</span><span class="o">=</span><span class="s2">&quot;&quot;</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;snippets management</span>
+
+<span class="sd">        Usage:</span>
+<span class="sd">        * ``%snip``          - total numbers of all snippets and notebooks</span>
+<span class="sd">        * ``%snip bar``      - search in the db</span>
+<span class="sd">        * ``%snip -r``       - reset indexing</span>
+<span class="sd">        * ``%snip -u``       - update db</span>
+<span class="sd">        * ``%snip &lt;key &gt;-s``       - short output</span>
+
+<span class="sd">        New search directories can be inserted into config.yaml[&#39;search_dirs&#39;]</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="n">opts</span><span class="p">,</span> <span class="n">argsl</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">parse_options</span><span class="p">(</span><span class="n">parameter_s</span><span class="p">,</span> <span class="s2">&quot;rust&quot;</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s2">&quot;string&quot;</span><span class="p">)</span>
+        <span class="n">args</span> <span class="o">=</span> <span class="n">argsl</span><span class="o">.</span><span class="n">split</span><span class="p">()</span>
+        <span class="k">if</span> <span class="s2">&quot;r&quot;</span> <span class="ow">in</span> <span class="n">opts</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">reset</span><span class="p">()</span>
+        <span class="k">elif</span> <span class="s2">&quot;t&quot;</span> <span class="ow">in</span> <span class="n">opts</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">snippets</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="s2">&quot;u&quot;</span> <span class="ow">in</span> <span class="n">opts</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">update</span><span class="p">()</span>
+        <span class="k">elif</span> <span class="ow">not</span> <span class="n">args</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">info</span><span class="p">()</span>
+        <span class="k">elif</span> <span class="n">args</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">isdigit</span><span class="p">():</span>  <span class="c1"># load snippets</span>
+            <span class="n">pos</span><span class="p">,</span> <span class="n">q</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">args</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]),</span> <span class="s2">&quot; &quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">args</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>
+            <span class="p">(</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">snippets</span><span class="o">.</span><span class="n">query</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;desc.str.contains(&#39;</span><span class="si">{</span><span class="n">q</span><span class="si">}</span><span class="s2">&#39;)&quot;</span><span class="p">,</span> <span class="n">engine</span><span class="o">=</span><span class="s2">&quot;python&quot;</span><span class="p">)</span>
+                <span class="o">.</span><span class="n">pipe</span><span class="p">(</span><span class="k">lambda</span> <span class="n">_df</span><span class="p">:</span> <span class="n">_df</span><span class="o">.</span><span class="n">iloc</span><span class="p">[</span><span class="n">pos</span><span class="p">][</span><span class="s2">&quot;source&quot;</span><span class="p">])</span>
+                <span class="o">.</span><span class="n">pipe</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">shell</span><span class="o">.</span><span class="n">set_next_input</span><span class="p">,</span> <span class="n">replace</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+            <span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">q</span> <span class="o">=</span> <span class="s2">&quot; &quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">args</span><span class="p">)</span>
+            <span class="p">(</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">snippets</span><span class="o">.</span><span class="n">query</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;desc.str.contains(&#39;</span><span class="si">{</span><span class="n">q</span><span class="si">}</span><span class="s2">&#39;)&quot;</span><span class="p">,</span> <span class="n">engine</span><span class="o">=</span><span class="s2">&quot;python&quot;</span><span class="p">)</span>
+                <span class="o">.</span><span class="n">reset_index</span><span class="p">()</span>
+                <span class="o">.</span><span class="n">pipe</span><span class="p">(</span><span class="n">_disp</span><span class="p">,</span> <span class="n">short</span><span class="o">=</span><span class="s2">&quot;s&quot;</span> <span class="ow">in</span> <span class="n">opts</span><span class="p">)</span>
+            <span class="p">)</span>
+</pre></div>
+
+    </div>
+</div>
+</div>
+
+</div>
+    {% endraw %}
+
+    {% raw %}
+    
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="o">!</span>pip list <span class="p">|</span> egrep <span class="s1">&#39;pandas|matplotlib|numpy|seaborn|xarray|rasterio&#39;</span> <span class="p">|</span> sed -e <span class="s1">&#39;s/ \+/==/g&#39;</span>
+</pre></div>
+
+    </div>
+</div>
+</div>
+
+</div>
+    {% endraw %}
+
+    {% raw %}
+    
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="o">!</span>nbdev_build_lib --fname 00_core.ipynb
+<span class="c1"># !nbdev_build_docs</span>
+</pre></div>
+
+    </div>
+</div>
+</div>
+
+<div class="output_wrapper">
+<div class="output">
+
+<div class="output_area">
+
+<div class="output_subarea output_stream output_stdout output_text">
+<pre>Converted 00_core.ipynb.
+</pre>
+</div>
+</div>
+
+</div>
+</div>
+
+</div>
+    {% endraw %}
+
+    {% raw %}
+    
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="o">!</span>pip install -qe .
+</pre></div>
+
+    </div>
+</div>
+</div>
+
+</div>
+    {% endraw %}
+
+    {% raw %}
+    
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="o">%</span><span class="k">reload_ext</span> sniptool
+</pre></div>
+
+    </div>
+</div>
+</div>
+
+</div>
+    {% endraw %}
+
+    {% raw %}
+    
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="o">%</span><span class="k">sn</span>
+</pre></div>
+
+    </div>
+</div>
+</div>
+
+</div>
+    {% endraw %}
+
+    {% raw %}
+    
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="o">%</span><span class="k">snip</span> -u
+</pre></div>
+
+    </div>
+</div>
+</div>
+
+<div class="output_wrapper">
+<div class="output">
+
+<div class="output_area">
+
+<div class="output_subarea output_stream output_stdout output_text">
+<pre>Empty DataFrame
+Columns: [path, utime, mtime, url, isnew]
+Index: []
+nothing update.
+</pre>
+</div>
+</div>
+
+</div>
+</div>
+
+</div>
+    {% endraw %}
+
+    {% raw %}
+    
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="o">%</span><span class="k">snip</span>
+</pre></div>
+
+    </div>
+</div>
+</div>
+
+<div class="output_wrapper">
+<div class="output">
+
+<div class="output_area">
+
+<div class="output_subarea output_stream output_stdout output_text">
+<pre>1 snippets, 2 notebooks in SnippetDB
+</pre>
+</div>
+</div>
+
+</div>
+</div>
+
+</div>
+    {% endraw %}
+
+    {% raw %}
+    
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="o">%</span><span class="k">d</span> pd
+</pre></div>
+
+    </div>
+</div>
+</div>
+
+</div>
+    {% endraw %}
+
+    {% raw %}
+    
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="o">%</span><span class="k">g</span> add .
+<span class="o">%</span><span class="k">g</span> save
+<span class="o">%</span><span class="k">g</span> push
+</pre></div>
+
+    </div>
+</div>
+</div>
+
+<div class="output_wrapper">
+<div class="output">
+
+<div class="output_area">
+
+<div class="output_subarea output_stream output_stdout output_text">
+<pre>[master a61adf5] update
+ 14 files changed, 1685 insertions(+), 34 deletions(-)
+ create mode 100644 Makefile
+ rewrite README.md (99%)
+ create mode 100644 docs/_config.yml
+ create mode 100644 docs/_data/sidebars/home_sidebar.yml
+ create mode 100644 docs/_data/topnav.yml
+ create mode 100644 docs/core.html
+ create mode 100644 docs/index.html
+ create mode 100644 docs/sidebar.json
+ create mode 100644 sniptool/__init__.py
+ create mode 100644 sniptool/_nbdev.py
+ create mode 100644 sniptool/core.py
+</pre>
+</div>
+</div>
+
+<div class="output_area">
+
+<div class="output_subarea output_stream output_stderr output_text">
+<pre>To https://github.com/suredream/sniptool.git
+   c91fbed..a61adf5  master -&gt; master
+</pre>
+</div>
+</div>
+
 </div>
 </div>
 
@@ -112,47 +676,39 @@ converting /home/jovyan/guide/sniptool/index.ipynb to README.md
 </div>
 </div>
 
+</div>
+    {% endraw %}
+
+    {% raw %}
+    
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="o">%</span><span class="k">g</span> add .
+<span class="o">%</span><span class="k">g</span> save
+<span class="c1"># %g push</span>
+</pre></div>
+
+    </div>
+</div>
+</div>
+
 <div class="output_wrapper">
 <div class="output">
 
 <div class="output_area">
 
-
-
-<div class="output_text output_subarea ">
-<pre><span class="ansi-red-fg">Source:</span>
-    <span class="ansi-blue-fg">@</span>line_magic
-    <span class="ansi-green-fg">def</span> snip<span class="ansi-blue-fg">(</span>self<span class="ansi-blue-fg">,</span> parameter_s<span class="ansi-blue-fg">=</span><span class="ansi-blue-fg">&#34;&#34;</span><span class="ansi-blue-fg">)</span><span class="ansi-blue-fg">:</span>
-        <span class="ansi-blue-fg">&#34;&#34;&#34;snippets management</span>
-
-<span class="ansi-blue-fg">        Usage:</span>
-<span class="ansi-blue-fg">        * ``%snip``          - total numbers of all snippets and notebooks</span>
-<span class="ansi-blue-fg">        * ``%snip bar``      - search in the db</span>
-<span class="ansi-blue-fg">        * ``%snip -r``       - reset indexing</span>
-<span class="ansi-blue-fg">        * ``%snip -u``       - update db</span>
-<span class="ansi-blue-fg">        * ``%snip -s``       - short output</span>
-
-<span class="ansi-blue-fg">        New search directories can be inserted into config.yaml[&#39;search_dirs&#39;]</span>
-<span class="ansi-blue-fg">        &#34;&#34;&#34;</span>
-
-        opts<span class="ansi-blue-fg">,</span> argsl <span class="ansi-blue-fg">=</span> self<span class="ansi-blue-fg">.</span>parse_options<span class="ansi-blue-fg">(</span>parameter_s<span class="ansi-blue-fg">,</span> <span class="ansi-blue-fg">&#34;rus&#34;</span><span class="ansi-blue-fg">,</span> mode<span class="ansi-blue-fg">=</span><span class="ansi-blue-fg">&#34;string&#34;</span><span class="ansi-blue-fg">)</span>
-        args <span class="ansi-blue-fg">=</span> argsl<span class="ansi-blue-fg">.</span>split<span class="ansi-blue-fg">(</span><span class="ansi-blue-fg">)</span>
-        <span class="ansi-green-fg">if</span> <span class="ansi-blue-fg">&#34;r&#34;</span> <span class="ansi-green-fg">in</span> opts<span class="ansi-blue-fg">:</span>
-            self<span class="ansi-blue-fg">.</span>reset<span class="ansi-blue-fg">(</span><span class="ansi-blue-fg">)</span>
-        <span class="ansi-green-fg">elif</span> <span class="ansi-blue-fg">&#34;u&#34;</span> <span class="ansi-green-fg">in</span> opts<span class="ansi-blue-fg">:</span>
-            self<span class="ansi-blue-fg">.</span>update<span class="ansi-blue-fg">(</span><span class="ansi-blue-fg">)</span>
-        <span class="ansi-green-fg">elif</span> <span class="ansi-green-fg">not</span> args<span class="ansi-blue-fg">:</span>
-            self<span class="ansi-blue-fg">.</span>info<span class="ansi-blue-fg">(</span><span class="ansi-blue-fg">)</span>
-        <span class="ansi-green-fg">elif</span> args<span class="ansi-blue-fg">[</span><span class="ansi-blue-fg">-</span><span class="ansi-cyan-fg">1</span><span class="ansi-blue-fg">]</span><span class="ansi-blue-fg">.</span>isdigit<span class="ansi-blue-fg">(</span><span class="ansi-blue-fg">)</span><span class="ansi-blue-fg">:</span>  <span class="ansi-red-fg"># load snippets</span>
-            pos <span class="ansi-blue-fg">=</span> int<span class="ansi-blue-fg">(</span>args<span class="ansi-blue-fg">[</span><span class="ansi-blue-fg">-</span><span class="ansi-cyan-fg">1</span><span class="ansi-blue-fg">]</span><span class="ansi-blue-fg">)</span>
-            self<span class="ansi-blue-fg">.</span>load<span class="ansi-blue-fg">(</span>args<span class="ansi-blue-fg">[</span><span class="ansi-blue-fg">:</span><span class="ansi-blue-fg">-</span><span class="ansi-cyan-fg">1</span><span class="ansi-blue-fg">]</span><span class="ansi-blue-fg">,</span> pos<span class="ansi-blue-fg">=</span>pos<span class="ansi-blue-fg">)</span>
-        <span class="ansi-red-fg"># default action - disp the snippets</span>
-        <span class="ansi-green-fg">else</span><span class="ansi-blue-fg">:</span>
-            self<span class="ansi-blue-fg">.</span>disp<span class="ansi-blue-fg">(</span><span class="ansi-blue-fg">&#34; &#34;</span><span class="ansi-blue-fg">.</span>join<span class="ansi-blue-fg">(</span>args<span class="ansi-blue-fg">)</span><span class="ansi-blue-fg">,</span> short<span class="ansi-blue-fg">=</span><span class="ansi-blue-fg">&#39;s&#39;</span> <span class="ansi-green-fg">in</span> opts<span class="ansi-blue-fg">)</span>
-<span class="ansi-red-fg">File:</span>   ~/guide/sniptool/sniptool/core.py
+<div class="output_subarea output_stream output_stdout output_text">
+<pre>[master c82b81a] update
+ 5 files changed, 146 insertions(+), 13 deletions(-)
+ create mode 100644 SnippetDB.db
+ create mode 100644 anywhere.py
+ create mode 100644 shortcuts.jupyterlab-settings
+ create mode 100644 start.py
 </pre>
 </div>
-
 </div>
 
 </div>
@@ -168,7 +724,7 @@ converting /home/jovyan/guide/sniptool/index.ipynb to README.md
 
 <div class="inner_cell">
     <div class="input_area">
-<div class=" highlight hl-ipython3"><pre><span></span><span class="o">%</span><span class="k">g</span>
+<div class=" highlight hl-ipython3"><pre><span></span><span class="o">!</span>nbdev_build_docs
 </pre></div>
 
     </div>
@@ -181,25 +737,17 @@ converting /home/jovyan/guide/sniptool/index.ipynb to README.md
 <div class="output_area">
 
 <div class="output_subarea output_stream output_stdout output_text">
-<pre>On branch master
-Your branch is up to date with &#39;origin/master&#39;.
-
-Changes not staged for commit:
-  (use &#34;git add &lt;file&gt;...&#34; to update what will be committed)
-  (use &#34;git checkout -- &lt;file&gt;...&#34; to discard changes in working directory)
-
-	modified:   00_core.ipynb
-	modified:   settings.ini
-
-Untracked files:
-  (use &#34;git add &lt;file&gt;...&#34; to include in what will be committed)
-
-	Makefile
-	docs/_config.yml
-	docs/_data/
-	sniptool/
-
-no changes added to commit (use &#34;git add&#34; and/or &#34;git commit -a&#34;)
+<pre>converting: /Users/jun.xiong/labws/sniptool/03_ver.ipynb
+converting: /Users/jun.xiong/labws/sniptool/00_core.ipynb
+converting: /Users/jun.xiong/labws/sniptool/01_viz.ipynb
+converting: /Users/jun.xiong/labws/sniptool/02_snip.ipynb
+converting: /Users/jun.xiong/labws/sniptool/index.ipynb
+[IPKernelApp] WARNING | Unknown error in handling startup files:
+[IPKernelApp] WARNING | Unknown error in handling startup files:
+[IPKernelApp] WARNING | Unknown error in handling startup files:
+[IPKernelApp] WARNING | Unknown error in handling startup files:
+[IPKernelApp] WARNING | Unknown error in handling startup files:
+converting /Users/jun.xiong/labws/sniptool/index.ipynb to README.md
 </pre>
 </div>
 </div>

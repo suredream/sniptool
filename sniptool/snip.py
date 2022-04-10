@@ -20,12 +20,6 @@ from IPython.core.display import HTML, display
 
 from .core import getmtime_ms, get_change_file
 
-# def _getmtime_ms(path):
-#     mtime = os.path.getmtime(path)
-#     stamp = datetime.datetime.fromtimestamp(mtime, tz=datetime.timezone.utc)
-#     return int(round(stamp.timestamp()))
-
-
 def _snippet_parser(path):
     sys.stdout.write(f"updating snippets from {path}\n")
     sys.stdout.flush()
@@ -50,6 +44,12 @@ def _snippet_parser(path):
                     url=url,
                 )
             )
+# def _get_snippets_file_list(dirs):
+#     include = [d for d in dirs if not d.startswith("!")]
+#     exclude = [d[1:] for d in dirs if d.startswith("!")]
+#     nb_list, links = _get_file_list(include, exclude)
+#     mtime = list(map(os.path.getmtime, nb_list))
+#     return pd.DataFrame(zip(nb_list, mtime, links), columns=["path", "mtime", "url"])
 
 def _get_file_list(targets, exclude=["__pycache__", ".ipynb_checkpoints"]):
     """ "
@@ -84,14 +84,6 @@ def _get_file_list(targets, exclude=["__pycache__", ".ipynb_checkpoints"]):
     nb_list = list(filter(lambda x: x[1], nb_list))
     return list(map(list, zip(*nb_list)))
 
-def _get_snippets_file_list(dirs):
-    include = [d for d in dirs if not d.startswith("!")]
-    exclude = [d[1:] for d in dirs if d.startswith("!")]
-    nb_list, links = _get_file_list(include, exclude)
-    mtime = list(map(os.path.getmtime, nb_list))
-    return pd.DataFrame(zip(nb_list, mtime, links), columns=["path", "mtime", "url"])
-
-
 def _disp(snippets, short=False):
     display(
         HTML(
@@ -114,20 +106,71 @@ def _disp(snippets, short=False):
             HTML(data=highlight(f"({_})" + content, PythonLexer(), HtmlFormatter()))
         )
 
-# def _get_change_file(last, this):
-#     if not os.path.isfile(last):
-#         os.system(f'touch {last}')
-#     nb_list = glob('*.ipynb')
-#     mtime = list(map(_getmtime_ms, nb_list))
-#     df = (pd.DataFrame(zip(nb_list, mtime), columns=["path", "mtime"])
-#           .sort_values(by='path')
-#           .to_csv(this, sep='|', index=False, header=False))
-# #     print(f'diff -y --suppress-common-lines {last} {this}')
-#     diff_ret = os.popen(f'diff -y --suppress-common-lines {last} {this}').read()
-#     for line in diff_ret.splitlines():
-#         file = line.split('|')[0].split()[-1]
-#         yield file
-#     os.rename(this, last)
+# test
+
+# Internal Cell
+from pathlib import Path
+import yaml
+import datetime
+from tempfile import NamedTemporaryFile
+
+def _get_repo_url(target):
+    "# TODO: link to github url"
+    import configparser
+    cfg1, cfg2 = target / "ghconfig", target / ".git/config"
+    if cfg1.is_file():  # has ghconfig
+        cfg = yaml.load(open(str(cfg1)), Loader=yaml.BaseLoader)
+        repo = cfg["repo"].rstrip(".git") + "/" + target.name
+    elif cfg2.is_file():
+        config = configparser.ConfigParser()
+        config.read(str(cfg2))
+        repo = config['remote "origin"']["url"].rstrip(".git") + "/" + target.name
+    else:
+        repo = None
+    return repo
+
+def _create_ipynb_list(dirname, root, ext='.ipynb'):
+    repo = _get_repo_url(root)
+    for target in dirname.iterdir():
+        if target.name.endswith(ext):
+            mtime = os.path.getmtime(target.name)
+            stamp = datetime.datetime.fromtimestamp(mtime, tz=datetime.timezone.utc)
+            stamp = int(round(stamp.timestamp()))
+#             yield repo + 'blob/master/' + str(target), stamp
+            yield str(target), stamp
+
+def _create_dir_list(search_dirs, exclude=["__pycache__", ".ipynb_checkpoints"]):
+    for target in search_dirs:
+        yield Path(target), Path(target)
+        for d in Path(target).iterdir():
+            if d.is_dir():
+                for e in exclude:
+                    if d.name.find(e) != -1:
+                        continue
+                if "." in d.name: continue
+                yield d, Path(target)
+
+def _snapshot_taken():
+    f = NamedTemporaryFile(mode="w", suffix=".txt", delete=False)
+    data = []
+    for dirname, root in _create_dir_list('.'):
+        for url, stamp in _create_ipynb_list(dirname, root):
+            data.append((url, stamp))
+    (pd.DataFrame(data, columns =['url', 'stamp'])
+        .sort_values(by='url')
+        .to_csv(f, sep='|', index=False, header=False))
+    return f.name
+
+def _detech_changed_files(last='last_snip.txt'):
+    if not os.path.isfile(last):
+        os.system(f'touch {last}')
+    this = _snapshot_taken()
+#     print(f'diff -y --suppress-common-lines {last} {this}')
+    diff_ret = os.popen(f'diff -y --suppress-common-lines {last} {this}').read()
+    for line in diff_ret.splitlines():
+        file = line.split('|')[0].split()[-1]
+        yield file
+    os.rename(this, last)
 
 # Internal Cell
 @magics_class
@@ -137,13 +180,17 @@ class SnippetsMagics(Magics):
     """
     def __init__(self, shell):
         super(SnippetsMagics, self).__init__(shell=shell)
+        app_dir = os.path.dirname(os.path.abspath(__file__))
+        app_dir = os.path.dirname(app_dir)
+        self.jsonfile = f'{app_dir}/snip.json'
+        self.snapshot = f'{app_dir}/last_snip.txt'
         try:
-            self.df = pd.read_json('snip.json')
+            self.df = pd.read_json(self.jsonfile)
         except ValueError:
             self.df = pd.DataFrame()
 
     @line_magic
-    def sn(self, parameter_s="", last="last.txt", this='this.txt'):
+    def sn(self, parameter_s=""):
         """snippets management
 
         Usage:
@@ -155,26 +202,25 @@ class SnippetsMagics(Magics):
 
         New search directories can be inserted into config.yaml['search_dirs']
         """
-        opts, argsl = self.parse_options(parameter_s, "rust", mode="string")
+        opts, argsl = self.parse_options(parameter_s, "drust", mode="string")
         args = argsl.split()
         if "u" in opts: # update
             if "r" in opts:
-                if os.path.isfile(last):
-                    os.remove(last)
-                if os.path.isfile('snip.json'):
-                    os.remove('snip.json')
-                self.df = pd.DataFrame()
-            nestedList = map(_snippet_parser, list(get_change_file(last, this)))
+                if os.path.isfile(self.snapshot):
+                    os.remove(self.snapshot)
+            nestedList = map(_snippet_parser, list(_detech_changed_files(self.snapshot)))
             ret_df = pd.DataFrame([item for sublist in nestedList for item in sublist])
             if self.df.empty:
                 self.df = ret_df
             else:
 #                 self.df = self.df.merge(ret_df, on='desc', how='right')
                 self.df = pd.concat([self.df, ret_df], axis=0, join='outer')
-            self.df.to_json('snip.json', orient='records')
+            self.df.to_json(self.jsonfile, orient='records')
+        elif "d" in opts:  # display first
+            self.df.head().pipe(_disp, short="s" in opts)
         elif not args: # info
             try:
-                n_ipynb = os.popen(f'wc -l {last}').read().split()[0]
+                n_ipynb = os.popen(f'wc -l {self.snapshot}').read().split()[0]
             except:
                 n_ipynb = 0
             print(
@@ -195,6 +241,3 @@ class SnippetsMagics(Magics):
                 .reset_index()
                 .pipe(_disp, short="s" in opts)
             )
-
-def load_ipython_extension(ipython):
-    ipython.register_magics(SnippetsMagics)

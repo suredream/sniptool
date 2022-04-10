@@ -10,8 +10,20 @@ entries:
       title: Overview
       url: /
     - output: web,pdf
-      title: sniptool
+      title: sniptool.core
       url: core.html
+    - output: web,pdf
+      title: visualization flow
+      url: viz.html
+    - output: web,pdf
+      title: Snippets Manager
+      url: snip.html
+    - output: web,pdf
+      title: Version Control
+      url: ver.html
+    - output: web,pdf
+      title: sniptool.misc
+      url: misc.html
     output: web
     title: sniptool
   output: web

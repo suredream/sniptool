@@ -4,8 +4,8 @@ __all__ = ["index", "modules", "custom_doc_links", "git_url"]
 
 index = {"getmtime_ms": "00_core.ipynb",
          "get_change_file": "00_core.ipynb",
-         "SnippetsMagics": "00_core.ipynb",
-         "MiscMagics": "00_core.ipynb",
+         "SnippetsMagics": "02_snip.ipynb",
+         "MiscMagics": "04_misc.ipynb",
          "AssetMagics": "01_viz.ipynb",
          "load_ipython_extension": "02_snip.ipynb",
          "VControlMagics": "03_ver.ipynb"}
@@ -13,7 +13,8 @@ index = {"getmtime_ms": "00_core.ipynb",
 modules = ["core.py",
            "viz.py",
            "snip.py",
-           "ver.py"]
+           "ver.py",
+           "misc.py"]
 
 doc_url = "https://suredream.github.io/sniptool/"
 
