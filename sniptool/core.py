@@ -173,8 +173,6 @@ def _disp(snippets, short=False):
 
 
 def _upsert(df, conn=None, model=None):
-    if df.empty:
-        return
     table = model.__table__
     stmt = insert(table).values(df.to_dict(orient="records"))
     update_cols = [c.name for c in table.c if c not in list(table.primary_key.columns)]
