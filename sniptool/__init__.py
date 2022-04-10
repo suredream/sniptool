@@ -28,7 +28,7 @@ todo
 - [x] Todo Tree: 
 - [x] absolute path, snip.json
 - [x] plot decorator
-- [ ] %cache_plot
+- [x] %cache_plot
 - [ ] unit test: nbdev_test_nbs
 - [ ] config yaml
 - [ ] savefig, uuid

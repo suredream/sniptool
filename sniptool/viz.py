@@ -19,6 +19,7 @@ import pandas as pd
 from io import BytesIO, StringIO
 from PIL import Image
 from IPython.core.magic import Magics, magics_class, line_magic, cell_magic
+from IPython import display
 from .core import getmtime_ms, get_change_file
 
 
@@ -57,3 +58,13 @@ class AssetMagics(Magics):
     def sa(self, line, last="last.txt", this='this.txt'):
         for path in get_change_file('*.ipynb',last, this):
             _export_output_image(path)
+
+    @cell_magic
+    def cached_plot(self, line: str, cell: str):
+        "cached_plot <>"
+        post = '\n'.join(['from matplotlib.pyplot import savefig',f'savefig("{line}")'])
+        if os.path.isfile(line): # use cached
+            return display.Image(line)
+        else: # actual plotting and save to disk
+            ip = get_ipython()
+            ip.run_cell(cell+post)
