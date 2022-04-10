@@ -1,6 +1,6 @@
 __version__ = "0.0.1"
 
-from .core import MiscMagics
+# from .core import MiscMagics
 from .viz import AssetMagics
 from .snip import SnippetsMagics
 from .ver import VControlMagics

@@ -1,4 +1,5 @@
-00_core.ipynb|1649575562
-01_viz.ipynb|1649575562
-02_snip.ipynb|1649576717
+00_core.ipynb|1649579459
+01_viz.ipynb|1649579409
+02_snip.ipynb|1649578076
+03_ver.ipynb|1649578070
 index.ipynb|1649566371

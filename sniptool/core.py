@@ -3,184 +3,31 @@
 __all__ = []
 
 # Internal Cell
-"""
-%snip magic for snippets management, supported by a sqlite db.
-
-%d        -- for object inspection
-%tidy     -- tidy-up notebook
-%g        -- git commands
-%saveimg  -- save cell outputs to disk
-%lint     -- save cell outputs to disk
-
-%%toc     -- create toc divider
-%%runingb -- running in the background
-
-snippets naming: # @desc #t1 #t2
-
-todo
-- [x] yaml cfg
-- [x] absolute path for db
-- [x] reset
-- [x] shortcut
-- [x] setup
-- [ ] savefig, uuid
-- [ ] url to source file
-- [ ] pre-commit, not ipynb, only select ipynb py and images, update images with uuid
-https://gist.github.com/tylerneylon/697065ca5906c185ec6dd3093b237164
-"""
-
-# Author: Jun Xiong. 04/08/2022, 12:46
-# Distributed under the terms of the Modified BSD License.
-
-import base64
 import os
-import sys
-import json
+import datetime
 import pandas as pd
-import yaml
-import logging
-import pycodestyle as pycodestyle_module
-import tempfile
 from glob import glob
-from PIL import Image
-from io import BytesIO, StringIO
-from os.path import expanduser
-from pathlib import Path
-from pygments import highlight
-from pygments.lexers import PythonLexer
-from pygments.formatters import HtmlFormatter
-from IPython.core.display import HTML, display
 from IPython.core.magic import Magics, magics_class, line_magic, cell_magic
-from sqlalchemy import create_engine, Column, String, Float, Text
-from sqlalchemy.dialects.sqlite import insert, dialect
-from sqlalchemy.ext.declarative import declarative_base
+def getmtime_ms(path):
+    mtime = os.path.getmtime(path)
+    stamp = datetime.datetime.fromtimestamp(mtime, tz=datetime.timezone.utc)
+    return int(round(stamp.timestamp()))
 
-Base = declarative_base()
-
-# Internal Cell
-# define tables
-class NBfiles(Base):
-    __tablename__ = "nbfiles"
-    path = Column(String(256), primary_key=True)
-    mtime = Column(Float(64))
-
-
-class Snippets(Base):
-    __tablename__ = "snippets"
-    tags = Column(String(256))
-    desc = Column(String(256), primary_key=True)
-    source = Column(Text)
-    url = Column(String(256))
-
-
-def _snippet_parser(path):
-    sys.stdout.write(f"updating snippets from {path}\n")
-    sys.stdout.flush()
-    notebook = json.load(open(path))
-
-    for cell in notebook["cells"]:
-        if not cell["source"]:
-            continue
-        head = cell["source"][0]
-        if head.startswith("# @"):
-            desc, *tags = tuple(head.lstrip("# @").split("#"))
-            tags = ";".join(tags) if tags else ""
-            source = "".join(cell["source"][1:])
-            url = ""
-            yield (
-                dict(
-                    tags=tags,
-                    desc=desc,
-                    source=source,
-                    url=url,
-                )
-            )
-
-
-def _get_file_list(targets, exclude=["__pycache__", ".ipynb_checkpoints"]):
-    """ "
-    This function recursively prints all contents of a pathlib.Path object
-    """
-    import configparser
-
-    nb_list = [(None, None)]
-    for target in targets:
-        target = Path(target)
-        cfg1, cfg2 = target / "ghconfig", target / ".git/config"
-        if cfg1.is_file():  # has ghconfig
-            cfg = yaml.load(open(str(cfg1)), Loader=yaml.BaseLoader)
-            root = cfg["repo"].rstrip(".git") + "/" + target.name
-        elif cfg2.is_file():
-            config = configparser.ConfigParser()
-            config.read(str(cfg2))
-            root = config['remote "origin"']["url"].rstrip(".git") + "/" + target.name
-        else:
-            root = None
-        for e in exclude:
-            if target.name.find(e) != -1:
-                return list(map(list, zip(*nb_list)))
-        for file in target.iterdir():
-            if file.is_dir():
-                if "." in file.name:
-                    continue
-                nb_list += _get_file_list([file.absolute().as_posix()], exclude=exclude)
-            elif file.name.endswith(".ipynb"):
-                nb_list.append((file.absolute().as_posix(), root))
-    # remove invalid lines
-    nb_list = list(filter(lambda x: x[1], nb_list))
-    return list(map(list, zip(*nb_list)))
-
-
-# _get_file_list(['/home/jovyan/helper'], exclude=['.ipynb_checkpoints'])
-
-# def _compile_query(query):
-#     compiler = (
-#         query.compile if not hasattr(
-#             query, "statement") else query.statement.compile
-#     )
-#     return compiler(dialect=dialect())
-
-
-def _get_snippets_file_list(dirs):
-    include = [d for d in dirs if not d.startswith("!")]
-    exclude = [d[1:] for d in dirs if d.startswith("!")]
-    nb_list, links = _get_file_list(include, exclude)
-    mtime = list(map(os.path.getmtime, nb_list))
-    return pd.DataFrame(zip(nb_list, mtime, links), columns=["path", "mtime", "url"])
-
-
-def _disp(snippets, short=False):
-    display(
-        HTML(
-            """
-    <style>
-    {pygments_css}
-    </style>
-    """.format(
-                pygments_css=HtmlFormatter().get_style_defs(".highlight")
-            )
-        )
-    )
-
-    for _, row in snippets.iterrows():
-        if short:
-            content = row["desc"]
-        else:
-            content = row["desc"] + "\n" + row["source"][:80]
-        display(
-            HTML(data=highlight(f"({_})" + content, PythonLexer(), HtmlFormatter()))
-        )
-
-
-def _upsert(df, conn=None, model=None):
-    table = model.__table__
-    stmt = insert(table).values(df.to_dict(orient="records"))
-    update_cols = [c.name for c in table.c if c not in list(table.primary_key.columns)]
-    on_conflict_stmt = stmt.on_conflict_do_update(
-        index_elements=table.primary_key.columns,
-        set_={c.key: c for c in stmt.excluded if c.key in update_cols},
-    )
-    conn.execute(on_conflict_stmt)
+def get_change_file(regex, last, this):
+    if not os.path.isfile(last):
+        os.system(f'touch {last}')
+    nb_list = glob(regex)
+#     print('nb_list', nb_list, regex)
+    mtime = list(map(getmtime_ms, nb_list))
+    df = (pd.DataFrame(zip(nb_list, mtime), columns=["path", "mtime"])
+          .sort_values(by='path')
+          .to_csv(this, sep='|', index=False, header=False))
+#     print(f'diff -y --suppress-common-lines {last} {this}')
+    diff_ret = os.popen(f'diff -y --suppress-common-lines {last} {this}').read()
+    for line in diff_ret.splitlines():
+        file = line.split('|')[0].split()[-1]
+        yield file
+    os.rename(this, last)
 
 # Internal Cell
 @magics_class

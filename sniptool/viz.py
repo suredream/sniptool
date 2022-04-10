@@ -19,26 +19,34 @@ import pandas as pd
 from io import BytesIO, StringIO
 from PIL import Image
 from IPython.core.magic import Magics, magics_class, line_magic, cell_magic
+from .core import getmtime_ms, get_change_file
 
-def _getmtime_ms(path):
-    mtime = os.path.getmtime(path)
-    stamp = datetime.datetime.fromtimestamp(mtime, tz=datetime.timezone.utc)
-    return int(round(stamp.timestamp()))
 
-def _get_change_file(last="last.snapshot.txt", this='this.snapshot.txt'):
-    if not os.path.isfile(last):
-        os.system(f'touch {last}')
-    nb_list = glob('*.ipynb')
-    mtime = list(map(_getmtime_ms, nb_list))
-    df = (pd.DataFrame(zip(nb_list, mtime), columns=["path", "mtime"])
-          .sort_values(by='path')
-          .to_csv(this, sep='|', index=False, header=False))
-#     print(f'diff -y --suppress-common-lines {last} {this}')
-    diff_ret = os.popen(f'diff -y --suppress-common-lines {last} {this}').read()
-    for line in diff_ret.splitlines():
-        file = line.split('|')[0].split()[-1]
-        yield file
-    os.rename(this, last)
+def _export_output_image(path, folder='img', show_filename = True):
+    if not os.path.exists(folder):
+        os.mkdir(folder)
+    notebook = json.load(open(path))
+    for cell in notebook["cells"]:
+        if not cell["source"]:
+            continue
+        head = cell["source"][0]
+        if head.startswith("# !"): # contain images
+            if show_filename:
+                sys.stdout.write(path)
+                sys.stdout.flush()
+                show_filename = False
+
+            oname = folder + "/" + head.lstrip("# !").strip()
+            for output in cell["outputs"]:
+                try:
+                    img_png = output["data"]["image/png"]
+                    im = Image.open(BytesIO(base64.b64decode(img_png)))
+                    im.save(oname, "PNG")
+                    sys.stdout.write(f"-- {oname} created.\n")
+                    sys.stdout.flush()
+                    break
+                except:
+                    pass
 
 @magics_class
 class AssetMagics(Magics):
@@ -46,28 +54,6 @@ class AssetMagics(Magics):
     Provides the %snip magic.
     """
     @line_magic
-    def sa(self, line, folder='img'):
-        if not os.path.exists(folder):
-            os.mkdir(folder)
-        for ipynb in _get_change_file():
-            print(ipynb)
-            with open(ipynb) as fin:
-                notebook = json.load(fin)
-                for cell in notebook["cells"]:
-                    if not cell["source"]:
-                        continue
-                    head = cell["source"][0]
-                    if head.startswith("# !"):
-                        oname = folder + "/" + head.lstrip("# !").strip()
-                        for output in cell["outputs"]:
-                            try:
-                                img_png = output["data"]["image/png"]
-                                im = Image.open(BytesIO(base64.b64decode(img_png)))
-                                im.save(oname, "PNG")
-                                print(f"-- {oname} created.")
-                                break
-                            except:
-                                pass
-
-def load_ipython_extension(ipython):
-    ipython.register_magics(AssetMagics)
+    def sa(self, line, last="last.txt", this='this.txt'):
+        for path in get_change_file('*.ipynb',last, this):
+            _export_output_image(path)

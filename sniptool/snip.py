@@ -18,10 +18,12 @@ from pygments.lexers import PythonLexer
 from pygments.formatters import HtmlFormatter
 from IPython.core.display import HTML, display
 
-def _getmtime_ms(path):
-    mtime = os.path.getmtime(path)
-    stamp = datetime.datetime.fromtimestamp(mtime, tz=datetime.timezone.utc)
-    return int(round(stamp.timestamp()))
+from .core import getmtime_ms, get_change_file
+
+# def _getmtime_ms(path):
+#     mtime = os.path.getmtime(path)
+#     stamp = datetime.datetime.fromtimestamp(mtime, tz=datetime.timezone.utc)
+#     return int(round(stamp.timestamp()))
 
 
 def _snippet_parser(path):
@@ -82,17 +84,6 @@ def _get_file_list(targets, exclude=["__pycache__", ".ipynb_checkpoints"]):
     nb_list = list(filter(lambda x: x[1], nb_list))
     return list(map(list, zip(*nb_list)))
 
-
-# _get_file_list(['/home/jovyan/helper'], exclude=['.ipynb_checkpoints'])
-
-# def _compile_query(query):
-#     compiler = (
-#         query.compile if not hasattr(
-#             query, "statement") else query.statement.compile
-#     )
-#     return compiler(dialect=dialect())
-
-
 def _get_snippets_file_list(dirs):
     include = [d for d in dirs if not d.startswith("!")]
     exclude = [d[1:] for d in dirs if d.startswith("!")]
@@ -123,20 +114,20 @@ def _disp(snippets, short=False):
             HTML(data=highlight(f"({_})" + content, PythonLexer(), HtmlFormatter()))
         )
 
-def _get_change_file(last, this):
-    if not os.path.isfile(last):
-        os.system(f'touch {last}')
-    nb_list = glob('*.ipynb')
-    mtime = list(map(_getmtime_ms, nb_list))
-    df = (pd.DataFrame(zip(nb_list, mtime), columns=["path", "mtime"])
-          .sort_values(by='path')
-          .to_csv(this, sep='|', index=False, header=False))
-#     print(f'diff -y --suppress-common-lines {last} {this}')
-    diff_ret = os.popen(f'diff -y --suppress-common-lines {last} {this}').read()
-    for line in diff_ret.splitlines():
-        file = line.split('|')[0].split()[-1]
-        yield file
-    os.rename(this, last)
+# def _get_change_file(last, this):
+#     if not os.path.isfile(last):
+#         os.system(f'touch {last}')
+#     nb_list = glob('*.ipynb')
+#     mtime = list(map(_getmtime_ms, nb_list))
+#     df = (pd.DataFrame(zip(nb_list, mtime), columns=["path", "mtime"])
+#           .sort_values(by='path')
+#           .to_csv(this, sep='|', index=False, header=False))
+# #     print(f'diff -y --suppress-common-lines {last} {this}')
+#     diff_ret = os.popen(f'diff -y --suppress-common-lines {last} {this}').read()
+#     for line in diff_ret.splitlines():
+#         file = line.split('|')[0].split()[-1]
+#         yield file
+#     os.rename(this, last)
 
 # Internal Cell
 @magics_class
@@ -150,7 +141,7 @@ class SnippetsMagics(Magics):
             self.df = pd.read_json('snip.json')
         except ValueError:
             self.df = pd.DataFrame()
-        
+
     @line_magic
     def sn(self, parameter_s="", last="last.txt", this='this.txt'):
         """snippets management
@@ -168,10 +159,12 @@ class SnippetsMagics(Magics):
         args = argsl.split()
         if "u" in opts: # update
             if "r" in opts:
-                os.remove(last)
-                os.remove('snip.json')
+                if os.path.isfile(last):
+                    os.remove(last)
+                if os.path.isfile('snip.json'):
+                    os.remove('snip.json')
                 self.df = pd.DataFrame()
-            nestedList = map(_snippet_parser, list(_get_change_file(last, this)))
+            nestedList = map(_snippet_parser, list(get_change_file(last, this)))
             ret_df = pd.DataFrame([item for sublist in nestedList for item in sublist])
             if self.df.empty:
                 self.df = ret_df
