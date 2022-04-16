@@ -8,6 +8,8 @@ import datetime
 import pandas as pd
 from glob import glob
 from IPython.core.magic import Magics, magics_class, line_magic, cell_magic
+import requests
+from os.path import expanduser
 
 # Internal Cell
 @magics_class
@@ -15,6 +17,28 @@ class MiscMagics(Magics):
     """snip magic for snippets management.
     Provides the %snip magic.
     """
+
+    @line_magic
+    def slack(self, line):
+        "my line magic"
+        def post_message_to_slack(text, blocks = None, slack_token=open(expanduser('~/.slack_token')).read().strip(), channel='local'):
+            return requests.post('https://slack.com/api/chat.postMessage', {
+                'token': slack_token,
+                'channel': channel,
+                'text': text
+            }).json()
+
+        if not line:
+            line = 'done'
+        post_message_to_slack(line)
+# curl -X POST -H 'Authorization: Bearer ' \
+# -H 'Content-type: application/json' \
+# --data '{"channel":"C015RC5PU85","text":"I hope the tour went well, Mr. Wonka."}' \
+# https://slack.com/api/chat.postMessage
+
+
+
+
     @line_magic
     def d(self, parameter_s="", n_cols=5, regex="", cap=False):
         import inspect
