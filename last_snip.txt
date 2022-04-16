@@ -1,6 +1,6 @@
-00_core.ipynb|1649618243
+00_core.ipynb|1649631811
 01_viz.ipynb|1649620137
 02_snip.ipynb|1649615379
 03_ver.ipynb|1649610723
-04_misc.ipynb|1649604042
-index.ipynb|1649618392
+04_misc.ipynb|1650073290
+index.ipynb|1649635584
