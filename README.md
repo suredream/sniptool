@@ -18,7 +18,6 @@ Fill me in please! Don't forget code examples:
 
 
 
-
-    2
-
-
+## TODO
+- %snip -a <notebook>.ipynb
+- %snip -a <dirname>
